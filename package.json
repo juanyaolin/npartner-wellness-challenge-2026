@@ -1,0 +1,17 @@
+{
+  "name": "npartner-wellness-challenge-2026",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "format": "node node_modules/prettier/bin/prettier.cjs --write \"**/*.{html,css,js,json,md}\"",
+    "lint": "node node_modules/htmlhint/bin/htmlhint \"*.html\" && node node_modules/stylelint/bin/stylelint.mjs \"assets/css/**/*.css\" && node node_modules/eslint/bin/eslint.js \"assets/js/**/*.js\""
+  },
+  "devDependencies": {
+    "eslint": "latest",
+    "prettier": "latest",
+    "stylelint": "latest",
+    "stylelint-config-standard": "latest",
+    "htmlhint": "latest"
+  }
+}

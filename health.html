@@ -4,153 +4,23 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>健康管理挑戰賽｜N-Partner HAHAGO</title>
-    <style>
-      :root {
-        --blue: #168bd7;
-        --blue-deep: #0865a8;
-        --green: #86c440;
-        --green-deep: #4f9b2f;
-        --ink: #10202b;
-        --muted: #5c7180;
-        --line: #d7e9ef;
-      }
-      * {
-        box-sizing: border-box;
-        margin: 0;
-        padding: 0;
-      }
-      body {
-        font-family:
-          -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC", Arial,
-          sans-serif;
-        background: linear-gradient(180deg, #f4ffe9, #fff);
-        color: var(--ink);
-        line-height: 1.7;
-      }
-      .wrap {
-        width: min(1040px, calc(100% - 36px));
-        margin: auto;
-      }
-      a {
-        text-decoration: none;
-        color: inherit;
-      }
-      .nav {
-        background: white;
-        border-bottom: 1px solid var(--line);
-        position: sticky;
-        top: 0;
-      }
-      .nav .wrap {
-        height: 72px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-      }
-      .logo {
-        font-weight: 950;
-        font-size: 25px;
-      }
-      .btn {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        min-height: 44px;
-        padding: 11px 18px;
-        border-radius: 999px;
-        background: linear-gradient(90deg, var(--green), var(--blue));
-        color: white;
-        font-weight: 900;
-      }
-      .ghost {
-        background: white;
-        color: var(--green-deep);
-        border: 1px solid #cfe6c0;
-      }
-      .hero {
-        padding: 70px 0 34px;
-      }
-      .eyebrow {
-        color: var(--green-deep);
-        font-weight: 950;
-      }
-      .hero h1 {
-        font-size: clamp(38px, 5vw, 64px);
-        line-height: 1.08;
-        letter-spacing: -0.05em;
-      }
-      .hero p {
-        font-size: 20px;
-        color: var(--muted);
-        max-width: 780px;
-        margin-top: 16px;
-      }
-      .grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 18px;
-        margin: 24px 0 46px;
-      }
-      .panel {
-        background: white;
-        border: 1px solid var(--line);
-        border-radius: 26px;
-        padding: 28px;
-        box-shadow: 0 20px 55px rgba(79, 155, 47, 0.09);
-      }
-      h2 {
-        font-size: 28px;
-        margin-bottom: 10px;
-      }
-      ul,
-      ol {
-        padding-left: 1.25em;
-        color: #526875;
-      }
-      .meta {
-        display: grid;
-        gap: 12px;
-      }
-      .item {
-        border-radius: 18px;
-        background: #f9fff3;
-        border: 1px solid #dfeecd;
-        padding: 16px;
-      }
-      .item strong {
-        color: #3d7c26;
-        display: block;
-      }
-      .notice {
-        border-left: 6px solid var(--green);
-        background: #f9fff3;
-      }
-      .footer {
-        text-align: center;
-        color: #6e8390;
-        padding: 36px;
-      }
-      @media (max-width: 760px) {
-        .grid {
-          grid-template-columns: 1fr;
-        }
-        .nav .wrap {
-          gap: 12px;
-        }
-        .logo {
-          font-size: 20px;
-        }
-      }
-    </style>
+    <link rel="stylesheet" href="assets/css/styles.css" />
+    <script src="assets/js/app.js" defer></script>
   </head>
-  <body>
+  <body class="detail-page health-page">
     <nav class="nav">
       <div class="wrap">
-        <a class="logo" href="index.html">N-Partner｜HAHAGO</a
-        ><a class="btn ghost" href="index.html#competitions">回首頁</a>
+        <a class="logo" href="index.html">
+          <span class="logoMark"><img src="images/npartner-mark.svg" alt="" /></span>
+          <span class="logoText">N-Partner｜HAHAGO</span>
+        </a>
+        <div class="navActions">
+          <a class="ghost" href="index.html#competitions">回首頁</a>
+          <a class="primary" href="index.html#signup">報名</a>
+        </div>
       </div>
     </nav>
-    <header class="hero wrap">
+    <header class="detail-hero wrap">
       <div class="eyebrow">個人健康管理項目</div>
       <h1>健康管理挑戰賽</h1>
       <p>
@@ -158,22 +28,20 @@
       </p>
     </header>
     <main class="wrap">
-      <section class="grid">
+      <section class="detail-grid">
         <div class="panel">
           <h2>競賽重點</h2>
-          <div class="meta">
-            <div class="item">
-              <strong>評比方向</strong
-              >依指定健康指標、改善幅度、達成率或活動指定公式計算。
+          <div class="detail-meta">
+            <div class="detail-item">
+              <strong>評比方向</strong>依指定健康指標、改善幅度、達成率或活動指定公式計算。
             </div>
-            <div class="item">
+            <div class="detail-item">
               <strong>資料範圍</strong>體重、體脂、身體組成等活動指定項目。
             </div>
-            <div class="item">
-              <strong>資料隱私</strong
-              >不公開個人健康原始數據，僅由承辦或授權窗口處理。
+            <div class="detail-item">
+              <strong>資料隱私</strong>不公開個人健康原始數據，僅由承辦或授權窗口處理。
             </div>
-            <div class="item">
+            <div class="detail-item">
               <strong>適合對象</strong>想建立健康管理習慣、追蹤個人進步的同仁。
             </div>
           </div>
@@ -191,12 +59,12 @@
       </section>
       <section class="panel notice">
         <h2>隱私提醒</h2>
-        <p style="color: #526875">
+        <p>
           這項競賽涉及較敏感的健康資料，建議在 Google Form
           中清楚標示資料用途、可存取人員、保存期間，以及是否可撤回或更正資料。
         </p>
-        <p style="margin-top: 18px">
-          <a class="btn" href="index.html#signup">前往報名參賽</a>
+        <p class="sectionAction">
+          <a class="btn primary" href="index.html#signup">前往報名參賽</a>
         </p>
       </section>
     </main>
