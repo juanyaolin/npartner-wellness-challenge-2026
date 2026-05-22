@@ -1,0 +1,741 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>N-Partner｜HAHAGO 健康大賽</title>
+    <style>
+      :root {
+        --blue: #168bd7;
+        --blue-deep: #0865a8;
+        --green: #86c440;
+        --green-deep: #4f9b2f;
+        --ink: #10202b;
+        --muted: #5c7180;
+        --paper: #f4fbff;
+        --surface: #ffffff;
+        --line: #d7e9ef;
+        --shadow: 0 24px 70px rgba(8, 101, 168, 0.12);
+        --radius: 28px;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      html {
+        scroll-behavior: smooth;
+      }
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC", Roboto,
+          "Helvetica Neue", Arial, sans-serif;
+        background: linear-gradient(
+          180deg,
+          #eefaff 0%,
+          #f8fff2 55%,
+          #ffffff 100%
+        );
+        color: var(--ink);
+        line-height: 1.68;
+      }
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+      .wrap {
+        width: min(1120px, calc(100% - 36px));
+        margin: auto;
+      }
+      .top {
+        background: linear-gradient(90deg, var(--blue-deep), var(--green-deep));
+        color: white;
+      }
+      .top .wrap {
+        display: flex;
+        justify-content: space-between;
+        gap: 18px;
+        align-items: center;
+        padding: 12px 0;
+        font-size: 14px;
+      }
+      .nav {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        background: rgba(255, 255, 255, 0.84);
+        backdrop-filter: blur(18px);
+        border-bottom: 1px solid rgba(8, 101, 168, 0.14);
+      }
+      .nav .wrap {
+        height: 76px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+      }
+      .logo {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-weight: 900;
+        letter-spacing: -0.02em;
+      }
+      .logoMark {
+        width: 46px;
+        height: 46px;
+        display: grid;
+        place-items: center;
+        border-radius: 14px;
+        background: linear-gradient(135deg, #fff 0%, #ecfbff 45%, #f4ffe6 100%);
+        border: 1px solid #cce7f3;
+        box-shadow: 0 10px 24px rgba(8, 101, 168, 0.16);
+      }
+      .logoMark svg {
+        width: 36px;
+        height: 36px;
+      }
+      .logoText {
+        font-size: 26px;
+      }
+      .links {
+        display: flex;
+        gap: 18px;
+        align-items: center;
+        color: #466070;
+        font-weight: 800;
+        font-size: 14px;
+      }
+      .links a:hover {
+        color: var(--blue-deep);
+      }
+      .primary {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 44px;
+        padding: 11px 18px;
+        border-radius: 999px;
+        background: linear-gradient(90deg, var(--blue), var(--green));
+        color: white;
+        font-weight: 900;
+        box-shadow: 0 14px 32px rgba(22, 139, 215, 0.22);
+      }
+      .ghost {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 44px;
+        padding: 11px 18px;
+        border-radius: 999px;
+        border: 1px solid #bcdde8;
+        color: var(--blue-deep);
+        font-weight: 900;
+        background: white;
+      }
+      .hero {
+        padding: 78px 0 52px;
+        position: relative;
+      }
+      .heroGrid {
+        display: grid;
+        grid-template-columns: 1.05fr 0.95fr;
+        gap: 38px;
+        align-items: center;
+      }
+      .eyebrow {
+        display: inline-flex;
+        padding: 8px 13px;
+        border-radius: 999px;
+        background: #e6f7ff;
+        color: var(--blue-deep);
+        font-weight: 900;
+        font-size: 14px;
+        margin-bottom: 18px;
+        border: 1px solid #c9eaf8;
+      }
+      .hero h1 {
+        font-size: clamp(38px, 5vw, 68px);
+        line-height: 1.07;
+        letter-spacing: -0.055em;
+        text-wrap: pretty;
+      }
+      .hero h1 em {
+        font-style: normal;
+        background: linear-gradient(90deg, var(--blue), var(--green));
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+      .hero p {
+        font-size: 20px;
+        color: var(--muted);
+        max-width: 760px;
+        margin-top: 20px;
+      }
+      .heroActions {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-top: 28px;
+      }
+      .brandCard {
+        background: white;
+        border: 1px solid var(--line);
+        border-radius: 34px;
+        padding: 30px;
+        box-shadow: var(--shadow);
+        position: relative;
+        overflow: hidden;
+      }
+      .brandCard:before {
+        content: "";
+        position: absolute;
+        inset: -80px -80px auto auto;
+        width: 240px;
+        height: 240px;
+        border-radius: 999px;
+        background: radial-gradient(
+          circle,
+          rgba(134, 196, 64, 0.24),
+          transparent 66%
+        );
+      }
+      .brandCard .logoBig {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 24px;
+      }
+      .brandCard .logoMark {
+        width: 70px;
+        height: 70px;
+        border-radius: 20px;
+      }
+      .brandCard .logoMark svg {
+        width: 54px;
+        height: 54px;
+      }
+      .brandCard .name {
+        font-size: 42px;
+        font-weight: 950;
+        letter-spacing: -0.04em;
+      }
+      .quick {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+      }
+      .quickItem {
+        border: 1px solid #e0edf2;
+        border-radius: 20px;
+        background: #fbfeff;
+        padding: 16px;
+      }
+      .quickItem span {
+        display: block;
+        color: #78909d;
+        font-size: 13px;
+      }
+      .quickItem b {
+        font-size: 17px;
+      }
+      .section {
+        padding: 42px 0;
+      }
+      .sectionTitle {
+        display: grid;
+        grid-template-columns: 240px 1fr;
+        gap: 36px;
+        margin-bottom: 22px;
+      }
+      .sectionTitle h2 {
+        font-size: 30px;
+        letter-spacing: -0.035em;
+      }
+      .sectionTitle p {
+        color: #637886;
+      }
+      .panel {
+        background: white;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        padding: 30px;
+        box-shadow: 0 18px 48px rgba(8, 101, 168, 0.07);
+      }
+      .twoCol {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 18px;
+      }
+      .competition {
+        position: relative;
+        border-radius: 28px;
+        padding: 28px;
+        border: 1px solid var(--line);
+        background: white;
+        box-shadow: 0 18px 48px rgba(8, 101, 168, 0.07);
+        overflow: hidden;
+      }
+      .competition:before {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 0;
+        height: 7px;
+        background: linear-gradient(90deg, var(--blue), var(--green));
+      }
+      .competition.walk:before {
+        background: var(--blue);
+      }
+      .competition.health:before {
+        background: var(--green);
+      }
+      .competition h3 {
+        font-size: 25px;
+        margin-bottom: 10px;
+      }
+      .competition p {
+        color: #5f7480;
+      }
+      .metaList {
+        display: grid;
+        gap: 10px;
+        margin-top: 18px;
+      }
+      .meta {
+        display: grid;
+        grid-template-columns: 94px 1fr;
+        gap: 12px;
+        background: #f7fbfd;
+        border: 1px solid #e2eef3;
+        border-radius: 16px;
+        padding: 12px;
+      }
+      .meta dt {
+        font-weight: 900;
+        color: #295269;
+      }
+      .meta dd {
+        color: #4e6572;
+      }
+      .cardActions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 20px;
+      }
+      .signup {
+        display: grid;
+        grid-template-columns: 1.1fr 0.9fr;
+        gap: 18px;
+        align-items: stretch;
+      }
+      .signupMain {
+        background: linear-gradient(
+          135deg,
+          var(--blue-deep),
+          var(--blue) 48%,
+          var(--green)
+        );
+        color: white;
+        border-radius: 30px;
+        padding: 32px;
+        box-shadow: var(--shadow);
+      }
+      .signupMain h2 {
+        font-size: 34px;
+        letter-spacing: -0.04em;
+        margin-bottom: 10px;
+      }
+      .signupMain p {
+        color: rgba(255, 255, 255, 0.88);
+        font-size: 18px;
+      }
+      .signupBox {
+        background: white;
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        padding: 22px;
+      }
+      .steps {
+        display: grid;
+        gap: 12px;
+        margin-top: 20px;
+      }
+      .step {
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+        background: rgba(255, 255, 255, 0.12);
+        border: 1px solid rgba(255, 255, 255, 0.24);
+        border-radius: 18px;
+        padding: 14px;
+      }
+      .num {
+        flex: 0 0 34px;
+        height: 34px;
+        border-radius: 999px;
+        background: white;
+        color: var(--blue-deep);
+        display: grid;
+        place-items: center;
+        font-weight: 950;
+      }
+      .privacy {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 18px;
+      }
+      .privacyBox {
+        border-radius: 24px;
+        padding: 24px;
+        border: 1px solid var(--line);
+        background: white;
+      }
+      .privacyBox h3 {
+        margin-bottom: 8px;
+      }
+      .privacyBox.public {
+        border-top: 6px solid var(--blue);
+      }
+      .privacyBox.private {
+        border-top: 6px solid var(--green);
+      }
+      ul {
+        padding-left: 1.2em;
+        color: #526875;
+      }
+      .timeline {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+      }
+      .time {
+        background: white;
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        padding: 18px;
+      }
+      .time strong {
+        display: block;
+      }
+      .time span {
+        color: var(--muted);
+      }
+      .footer {
+        text-align: center;
+        color: #6e8390;
+        padding: 38px 18px;
+      }
+      .mobileOnly {
+        display: none;
+      }
+      @media (max-width: 860px) {
+        .heroGrid,
+        .twoCol,
+        .signup,
+        .privacy,
+        .sectionTitle {
+          grid-template-columns: 1fr;
+        }
+        .quick,
+        .timeline {
+          grid-template-columns: 1fr 1fr;
+        }
+        .links {
+          display: none;
+        }
+        .mobileOnly {
+          display: inline-flex;
+        }
+        .brandCard .name {
+          font-size: 34px;
+        }
+        .section {
+          padding: 30px 0;
+        }
+      }
+      @media (max-width: 560px) {
+        .top .wrap {
+          display: block;
+        }
+        .quick,
+        .timeline {
+          grid-template-columns: 1fr;
+        }
+        .hero h1 {
+          font-size: 40px;
+        }
+        .hero p {
+          font-size: 18px;
+        }
+        .logoText {
+          font-size: 21px;
+        }
+        .panel,
+        .competition,
+        .signupMain {
+          padding: 22px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="top">
+      <div class="wrap">
+        <strong>N-Partner 內部活動公告｜HAHAGO 健康大賽</strong
+        ><span>請於報名截止日前完成報名</span>
+      </div>
+    </div>
+    <nav class="nav">
+      <div class="wrap">
+        <a
+          class="logo"
+          href="index.html"
+          aria-label="N-Partner HAHAGO 健康大賽首頁"
+          ><span class="logoMark" aria-hidden="true"
+            ><svg viewBox="0 0 64 64">
+              <path
+                d="M9 49V15l18 18L55 8v39L38 30 9 56z"
+                fill="none"
+                stroke="#168bd7"
+                stroke-width="6"
+                stroke-linejoin="round"
+              />
+              <circle cx="23" cy="24" r="8" fill="#86c440" />
+              <path
+                d="M21 20c8 2 13 7 17 15"
+                fill="none"
+                stroke="#0865a8"
+                stroke-width="4"
+                stroke-linecap="round"
+              /></svg></span
+          ><span class="logoText">N-Partner</span></a
+        >
+        <div class="links">
+          <a href="#overview">活動概要</a><a href="#competitions">競賽項目</a
+          ><a href="#signup">報名參賽</a><a href="#privacy">資料公開</a
+          ><a class="primary" href="#signup">我要報名</a>
+        </div>
+        <a class="primary mobileOnly" href="#signup">報名</a>
+      </div>
+    </nav>
+    <header class="hero wrap">
+      <div class="heroGrid">
+        <div>
+          <div class="eyebrow">公司夥伴健康活動｜藍綠品牌版</div>
+          <h1>一起走出日常改變，參加 <em>HAHAGO 健康大賽</em></h1>
+          <p>
+            本次活動包含「公開步數排名賽」與「健康管理挑戰賽」。首頁保留重點說明，詳細規則改由兩個競賽頁面承接，讓報名前閱讀更清楚。
+          </p>
+          <div class="heroActions">
+            <a class="primary" href="#signup">立即報名參賽</a
+            ><a class="ghost" href="#competitions">查看兩項競賽</a>
+          </div>
+        </div>
+        <aside class="brandCard">
+          <div class="logoBig">
+            <span class="logoMark"
+              ><svg viewBox="0 0 64 64">
+                <path
+                  d="M9 49V15l18 18L55 8v39L38 30 9 56z"
+                  fill="none"
+                  stroke="#168bd7"
+                  stroke-width="6"
+                  stroke-linejoin="round"
+                />
+                <circle cx="23" cy="24" r="8" fill="#86c440" />
+                <path
+                  d="M21 20c8 2 13 7 17 15"
+                  fill="none"
+                  stroke="#0865a8"
+                  stroke-width="4"
+                  stroke-linecap="round"
+                />
+              </svg>
+            </span>
+            <div class="name">N-Partner</div>
+          </div>
+          <div class="quick">
+            <div class="quickItem">
+              <span>活動對象</span><b>公司／團隊成員</b>
+            </div>
+            <div class="quickItem">
+              <span>報名期間</span><b>YYYY/MM/DD 前</b>
+            </div>
+            <div class="quickItem">
+              <span>活動期間</span><b>YYYY/MM/DD - YYYY/MM/DD</b>
+            </div>
+            <div class="quickItem">
+              <span>參賽方式</span><b>可擇一或兩項皆參加</b>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </header>
+    <main class="wrap">
+      <section id="overview" class="section">
+        <div class="panel">
+          <div class="sectionTitle">
+            <h2>活動概要</h2>
+            <p>
+              活動目的是鼓勵大家建立日常運動與健康管理習慣。公開步數排名賽提供可見的健走成果；健康管理挑戰賽則重視個人改善，並以保護個資與健康資料隱私為原則。
+            </p>
+          </div>
+        </div>
+      </section>
+      <section id="competitions" class="section">
+        <div class="sectionTitle">
+          <h2>兩項競賽</h2>
+          <p>
+            首頁只保留差異摘要與入口，詳細辦法改放到各自頁面，降低首頁閱讀負擔。
+          </p>
+        </div>
+        <div class="twoCol">
+          <article class="competition walk">
+            <h3>公開步數排名賽</h3>
+            <p>
+              透過累積步數與公開排行榜，鼓勵大家把走路融入通勤、午休與日常生活。
+            </p>
+            <dl class="metaList">
+              <div class="meta">
+                <dt>排名依據</dt>
+                <dd>活動期間累積總步數</dd>
+              </div>
+              <div class="meta">
+                <dt>公開資訊</dt>
+                <dd>公開名稱、名次、累積步數</dd>
+              </div>
+              <div class="meta">
+                <dt>資料更新</dt>
+                <dd>每週／雙週依公告方式更新</dd>
+              </div>
+            </dl>
+            <div class="cardActions">
+              <a class="primary" href="walking.html">查看步數賽詳情</a>
+            </div>
+          </article>
+          <article class="competition health">
+            <h3>健康管理挑戰賽</h3>
+            <p>
+              鼓勵參賽者追蹤個人健康變化，重點是改善與養成習慣，不公開比較私人數據。
+            </p>
+            <dl class="metaList">
+              <div class="meta">
+                <dt>評比方向</dt>
+                <dd>依指定健康指標與改善幅度</dd>
+              </div>
+              <div class="meta">
+                <dt>資料範圍</dt>
+                <dd>體重、體脂、身體組成等指定項目</dd>
+              </div>
+              <div class="meta">
+                <dt>公開資訊</dt>
+                <dd>不公開個人健康數據</dd>
+              </div>
+            </dl>
+            <div class="cardActions">
+              <a class="primary" href="health.html">查看健康挑戰詳情</a>
+            </div>
+          </article>
+        </div>
+      </section>
+      <section id="signup" class="section">
+        <div class="signup">
+          <div class="signupMain">
+            <h2>報名參賽</h2>
+            <p>
+              此區已整合原本「報名方式」與最下方
+              CTA，主要任務是讓同仁完成報名並理解參賽資料如何使用。
+            </p>
+            <div class="steps">
+              <div class="step">
+                <div class="num">1</div>
+                <div>
+                  <strong>選擇參賽項目</strong>
+                  <p>可只參加公開步數排名賽，也可同時參加健康管理挑戰賽。</p>
+                </div>
+              </div>
+              <div class="step">
+                <div class="num">2</div>
+                <div>
+                  <strong>填寫 Google Form</strong>
+                  <p>使用公司信箱報名，設定排行榜公開顯示名稱。</p>
+                </div>
+              </div>
+              <div class="step">
+                <div class="num">3</div>
+                <div>
+                  <strong>等待活動開始</strong>
+                  <p>活動期間依公告週期提交步數或指定健康資料。</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <aside class="signupBox">
+            <h3>報名入口</h3>
+            <p style="color: #5c7180; margin: 8px 0 18px">
+              正式上線時可放 Google Form 連結或 QR Code。
+            </p>
+            <a class="primary" href="#" aria-label="前往 Google Form 報名表"
+              >前往報名表</a
+            >
+            <p style="font-size: 13px; color: #78909d; margin-top: 14px">
+              窗口：活動承辦人／HR 或福委會<br />截止：YYYY/MM/DD HH:mm
+            </p>
+          </aside>
+        </div>
+      </section>
+      <section id="privacy" class="section">
+        <div class="sectionTitle">
+          <h2>資料公開範圍</h2>
+          <p>
+            此活動同時包含公開排行榜與私人健康資料，因此首頁保留這段作為報名前的明確提醒。
+          </p>
+        </div>
+        <div class="privacy">
+          <div class="privacyBox public">
+            <h3>會公開的資訊</h3>
+            <ul>
+              <li>步數排行榜公開顯示名稱</li>
+              <li>目前名次</li>
+              <li>活動期間累積總步數</li>
+              <li>排行榜最後更新時間</li>
+            </ul>
+          </div>
+          <div class="privacyBox private">
+            <h3>不公開的資訊</h3>
+            <ul>
+              <li>體重、體脂、身體組成等私人健康數據</li>
+              <li>健康管理挑戰的原始紀錄</li>
+              <li>未經同意的個人身份或敏感資訊</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+      <section class="section">
+        <div class="sectionTitle">
+          <h2>重要時程</h2>
+          <p>正式公告時請替換成實際日期。</p>
+        </div>
+        <div class="timeline">
+          <div class="time">
+            <strong>報名開始</strong><span>YYYY/MM/DD</span>
+          </div>
+          <div class="time">
+            <strong>報名截止</strong><span>YYYY/MM/DD</span>
+          </div>
+          <div class="time">
+            <strong>活動期間</strong><span>YYYY/MM/DD - YYYY/MM/DD</span>
+          </div>
+          <div class="time">
+            <strong>結果公告</strong><span>YYYY/MM/DD</span>
+          </div>
+        </div>
+      </section>
+    </main>
+    <footer class="footer">N-Partner｜HAHAGO 健康大賽活動頁草案</footer>
+  </body>
+</html>

@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>公開步數排名賽｜N-Partner HAHAGO</title>
+    <style>
+      :root {
+        --blue: #168bd7;
+        --blue-deep: #0865a8;
+        --green: #86c440;
+        --ink: #10202b;
+        --muted: #5c7180;
+        --line: #d7e9ef;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC", Arial,
+          sans-serif;
+        background: linear-gradient(180deg, #eefaff, #fff);
+        color: var(--ink);
+        line-height: 1.7;
+      }
+      .wrap {
+        width: min(1040px, calc(100% - 36px));
+        margin: auto;
+      }
+      a {
+        text-decoration: none;
+        color: inherit;
+      }
+      .nav {
+        background: white;
+        border-bottom: 1px solid var(--line);
+        position: sticky;
+        top: 0;
+      }
+      .nav .wrap {
+        height: 72px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .logo {
+        font-weight: 950;
+        font-size: 25px;
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 44px;
+        padding: 11px 18px;
+        border-radius: 999px;
+        background: linear-gradient(90deg, var(--blue), var(--green));
+        color: white;
+        font-weight: 900;
+      }
+      .ghost {
+        background: white;
+        color: var(--blue-deep);
+        border: 1px solid #bcdde8;
+      }
+      .hero {
+        padding: 70px 0 34px;
+      }
+      .eyebrow {
+        color: var(--blue-deep);
+        font-weight: 950;
+      }
+      .hero h1 {
+        font-size: clamp(38px, 5vw, 64px);
+        line-height: 1.08;
+        letter-spacing: -0.05em;
+      }
+      .hero p {
+        font-size: 20px;
+        color: var(--muted);
+        max-width: 760px;
+        margin-top: 16px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 18px;
+        margin: 24px 0 46px;
+      }
+      .panel {
+        background: white;
+        border: 1px solid var(--line);
+        border-radius: 26px;
+        padding: 28px;
+        box-shadow: 0 20px 55px rgba(8, 101, 168, 0.09);
+      }
+      h2 {
+        font-size: 28px;
+        margin-bottom: 10px;
+      }
+      ul,
+      ol {
+        padding-left: 1.25em;
+        color: #526875;
+      }
+      .meta {
+        display: grid;
+        gap: 12px;
+      }
+      .item {
+        border-radius: 18px;
+        background: #f6fbfe;
+        border: 1px solid #e1eef4;
+        padding: 16px;
+      }
+      .item strong {
+        color: #295269;
+        display: block;
+      }
+      .footer {
+        text-align: center;
+        color: #6e8390;
+        padding: 36px;
+      }
+      @media (max-width: 760px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+        .nav .wrap {
+          gap: 12px;
+        }
+        .logo {
+          font-size: 20px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="nav">
+      <div class="wrap">
+        <a class="logo" href="index.html">N-Partner｜HAHAGO</a
+        ><a class="btn ghost" href="index.html#competitions">回首頁</a>
+      </div>
+    </nav>
+    <header class="hero wrap">
+      <div class="eyebrow">公開競賽項目</div>
+      <h1>公開步數排名賽</h1>
+      <p>
+        以活動期間累積總步數作為排名依據，讓同仁透過公開排行榜看到彼此的健走成果。未登錄的週期依活動規則以 0 計算。
+      </p>
+    </header>
+    <main class="wrap">
+      <section class="grid">
+        <div class="panel">
+          <h2>競賽重點</h2>
+          <div class="meta">
+            <div class="item">
+              <strong>排名方式</strong>以活動期間累積總步數由高到低排序。
+            </div>
+            <div class="item">
+              <strong>資料登錄</strong>由裁判或承辦窗口每週／雙週登錄一次。
+            </div>
+            <div class="item">
+              <strong>缺漏處理</strong>該週期未提供資料者，該週期步數以 0 計。
+            </div>
+            <div class="item">
+              <strong>公開內容</strong
+              >公開顯示名稱、名次、累積步數、最後更新時間。
+            </div>
+          </div>
+        </div>
+        <div class="panel">
+          <h2>參賽流程</h2>
+          <ol>
+            <li>使用公司信箱完成報名。</li>
+            <li>設定排行榜公開顯示名稱。</li>
+            <li>活動期間依指定週期提交步數證明或由指定窗口登錄。</li>
+            <li>排行榜依登錄資料更新。</li>
+            <li>活動結束後依總步數公布結果。</li>
+          </ol>
+        </div>
+      </section>
+      <section class="panel">
+        <h2>適合參加的人</h2>
+        <p style="color: #526875">
+          想把走路融入通勤、午休、下班散步等日常情境的同仁。這項競賽強調公開排名與持續累積，適合喜歡用排行榜激勵自己的參賽者。
+        </p>
+        <p style="margin-top: 18px">
+          <a class="btn" href="index.html#signup">前往報名參賽</a>
+        </p>
+      </section>
+    </main>
+    <footer class="footer">N-Partner｜HAHAGO 健康大賽</footer>
+  </body>
+</html>
