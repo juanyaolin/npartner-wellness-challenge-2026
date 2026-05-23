@@ -628,3 +628,77 @@ body.health-page {
     grid-template-columns: 1fr;
   }
 }
+
+/* Event information blocks added for the 2026 contest details. */
+.sectionTitle.compact {
+  grid-template-columns: 1fr;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.tool-card {
+  border: 1px solid #dfeecd;
+  border-radius: 22px;
+  background: linear-gradient(135deg, #fbfff6, #f1ffe7);
+  padding: 22px;
+}
+
+.tool-card h3 {
+  font-size: 28px;
+  margin: 10px 0 6px;
+}
+
+.badge {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  border-radius: 999px;
+  background: #e8f8d9;
+  color: #3d7c26;
+  font-weight: 950;
+  padding: 6px 12px;
+}
+
+.prize-panel {
+  margin-bottom: 28px;
+}
+
+.prizes {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.prize {
+  border: 1px solid #e1eef4;
+  border-radius: 20px;
+  background: #f9fcfe;
+  padding: 18px;
+}
+
+.prize strong,
+.prize span {
+  display: block;
+}
+
+.prize strong {
+  color: var(--blue-deep);
+  font-size: 18px;
+}
+
+.prize span {
+  color: var(--ink);
+  font-size: 22px;
+  font-weight: 950;
+  margin-top: 4px;
+}
+
+.walking-notice {
+  border-left-color: var(--blue);
+}
+
+@media (width <= 760px) {
+  .prizes {
+    grid-template-columns: 1fr;
+  }
+}
