@@ -86,10 +86,6 @@ a {
   height: 46px;
   display: grid;
   place-items: center;
-  border-radius: 14px;
-  background: linear-gradient(135deg, #fff 0%, #ecfbff 45%, #f4ffe6 100%);
-  border: 1px solid #cce7f3;
-  box-shadow: 0 10px 24px rgb(8 101 168 / 16%);
 }
 
 .logoMark svg {
@@ -99,6 +95,10 @@ a {
 
 .logoText {
   font-size: 26px;
+  color: transparent;
+  background-image: linear-gradient(90deg, var(--blue), var(--green));
+  background-clip: text;
+  -webkit-background-clip: text;
 }
 
 .links {
@@ -277,6 +277,7 @@ a {
 
 .sectionTitle p {
   color: #637886;
+  align-self: center;
 }
 
 .panel {
@@ -285,6 +286,10 @@ a {
   border-radius: var(--radius);
   padding: 30px;
   box-shadow: 0 18px 48px rgb(8 101 168 / 7%);
+}
+
+.panel h2 {
+  padding-bottom: 12px;
 }
 
 .twoCol {

@@ -1,8 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
-  <title id="title">N-Partner brand mark</title>
-  <desc id="desc">A blue angular N shape with a green wellness circle.</desc>
-  <rect width="64" height="64" rx="16" fill="#ffffff"/>
-  <path d="M9 49V15l18 18L55 8v39L38 30 9 56z" fill="none" stroke="#168bd7" stroke-width="6" stroke-linejoin="round"/>
-  <circle cx="23" cy="24" r="8" fill="#86c440"/>
-  <path d="M21 20c8 2 13 7 17 15" fill="none" stroke="#0865a8" stroke-width="4" stroke-linecap="round"/>
-</svg>
