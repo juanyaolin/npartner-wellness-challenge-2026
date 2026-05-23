@@ -10,21 +10,23 @@
   <body class="detail-page health-page">
     <nav class="nav">
       <div class="wrap">
-        <a class="logo" href="index.html">
-          <span class="logoMark"><img src="images/npartner-mark.svg" alt="" /></span>
-          <span class="logoText">N-Partner｜三比八大賽</span>
-        </a>
+        <a class="logo" href="index.html"
+          ><span class="logoMark"><img src="images/npartner-mark.svg" alt="" /></span
+          ><span class="logoText">N-Partner｜三比八大賽</span></a
+        >
         <div class="navActions">
-          <a class="ghost" href="index.html#competitions">回首頁</a>
-          <a class="primary" href="index.html#signup">報名</a>
+          <a class="ghost" href="index.html#competitions">回首頁</a
+          ><a class="primary" href="index.html#signup">報名</a>
         </div>
       </div>
     </nav>
     <header class="detail-hero wrap">
-      <div class="eyebrow">健康管理項目｜男女分組積分賽</div>
+      <div class="eyebrow">健康管理項目｜男女分組積分排名賽</div>
       <h1>健康管理積分賽</h1>
       <p>
-        每兩週量測一次體重、體脂肪率、骨骼肌率，男子組與女子組分開競賽。全程採匿名制，公開競賽數據但不公開真實參賽人員資訊。
+        競賽時間為 2026/06/08（一）至
+        2026/10/12（一）。每兩週量測一次體重、體脂肪率、骨骼肌率，依加權改善結果排名取得基本積分，並可透過
+        HAHAGO 每週平均步數取得額外積分。
       </p>
     </header>
     <main class="wrap">
@@ -32,16 +34,37 @@
         <div class="panel">
           <h2>競賽重點</h2>
           <div class="detail-meta">
-            <div class="detail-item"><strong>分組方式</strong>男子組、女子組分開競賽。</div>
+            <div class="detail-item"><strong>競賽方式</strong>積分排名賽。</div>
+            <div class="detail-item"><strong>競賽組別</strong>兩組，男女組分開競賽。</div>
             <div class="detail-item">
-              <strong>量測週期</strong>每兩週量測一次參賽者的體重、體脂肪率、骨骼肌率。
+              <strong>量測週期</strong>每兩週量測一次體重、體脂肪率、骨骼肌率。
             </div>
             <div class="detail-item">
-              <strong>競賽方式</strong>積分賽；當次量測成績參與排名並取得積分，詳細計分公式待公告。
+              <strong>未量測處理</strong>當週未量測也未使用跳過卡者，當週積分以 0 計算。
             </div>
-            <div class="detail-item">
-              <strong>最低人數</strong>男女組各 9 人；人數不足的組別不舉辦競賽。
-            </div>
+          </div>
+        </div>
+        <div class="panel formula-panel">
+          <h2>基本積分公式</h2>
+          <div class="formula">體重減少率 × 30% + 體脂肪減少率 × 50% + 骨骼肌增加率 × 20%</div>
+          <ul class="rule-list">
+            <li>體重減少率 =（前次體重 - 當次體重）/ 前次體重 × 100%</li>
+            <li>體脂肪減少率 =（前次體脂肪 - 當次體脂肪）/ 前次體脂肪 × 100%</li>
+            <li>骨骼肌增加率 =（當次骨骼肌 - 前次骨骼肌）/ 前次骨骼肌 × 100%</li>
+            <li>加權結果排名最後一名獲得 1 分，第一名獲得參賽者人數 +1 的積分。</li>
+          </ul>
+        </div>
+      </section>
+      <section class="detail-grid stacked-mobile">
+        <div class="panel">
+          <h2>額外積分</h2>
+          <div class="tool-card blue-card">
+            <span class="badge blue">HAHAGO 步數達標</span>
+            <h3>每週平均超過 6000 步</h3>
+            <p>
+              每次數據量測時，由參賽者主動提供步數資料。平均步數超過 6000 步的周次可獲得 1
+              分，兩週都超過可獲得 2 分。
+            </p>
           </div>
         </div>
         <div class="panel">
@@ -57,8 +80,8 @@
       </section>
       <section class="panel prize-panel">
         <div class="sectionTitle compact">
-          <h2>競賽獎項</h2>
-          <p>兩項競賽有各自獎金；此頁列出健康管理積分賽獎項。</p>
+          <h2>最低人數與獎項</h2>
+          <p>男女組各 9 人；為鼓勵更多夥伴參與，人數不足的組別將停辦。</p>
         </div>
         <div class="prizes">
           <div class="prize"><strong>冠軍</strong><span>現金 5,000 元</span></div>
@@ -67,9 +90,9 @@
         </div>
       </section>
       <section class="panel notice">
-        <h2>隱私與資料提醒</h2>
+        <h2>裁決與隱私提醒</h2>
         <p>
-          本項目涉及體重、體脂肪率、骨骼肌率等健康資料。活動會公開競賽數據，但不公開真實參賽人員資訊；正式報名表建議補充資料用途、可存取人員與保存期間。
+          大賽全程採匿名制，會公開競賽數據，但不公開真實參賽人員資訊。為避免作弊，裁判擁有所有競賽項目的成績裁決權。
         </p>
         <p class="sectionAction">
           <a class="btn primary" href="index.html#signup">前往報名參賽</a>

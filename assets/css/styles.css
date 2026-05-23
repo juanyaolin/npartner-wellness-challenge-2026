@@ -702,3 +702,62 @@ body.health-page {
     grid-template-columns: 1fr;
   }
 }
+
+.formula-panel {
+  border-top: 6px solid var(--green);
+}
+
+.formula {
+  border: 1px solid #dfeecd;
+  border-radius: 18px;
+  background: #f9fff3;
+  color: #2f6d1e;
+  font-size: 20px;
+  font-weight: 950;
+  line-height: 1.5;
+  margin: 12px 0 16px;
+  padding: 18px;
+}
+
+.rule-list {
+  display: grid;
+  gap: 8px;
+}
+
+.blue-card {
+  border-color: #cfe8f5;
+  background: linear-gradient(135deg, #f5fcff, #eaf7ff);
+}
+
+.badge.blue {
+  background: #e2f3fb;
+  color: var(--blue-deep);
+}
+
+.stacked-mobile {
+  margin-top: -20px;
+}
+
+.prizes.four {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.walking-prizes .prize strong {
+  color: var(--blue-deep);
+}
+
+@media (width <= 960px) {
+  .prizes.four {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (width <= 760px) {
+  .formula {
+    font-size: 17px;
+  }
+
+  .prizes.four {
+    grid-template-columns: 1fr;
+  }
+}
