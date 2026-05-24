@@ -98,7 +98,6 @@ a {
   color: transparent;
   background-image: linear-gradient(90deg, var(--blue), var(--green));
   background-clip: text;
-  -webkit-background-clip: text;
 }
 
 .links {
@@ -763,6 +762,109 @@ body.health-page {
   }
 
   .prizes.four {
+    grid-template-columns: 1fr;
+  }
+}
+
+.registration-mini {
+  border: 1px solid #e1eef4;
+  border-radius: 20px;
+  background: #f8fcfe;
+  margin-top: 18px;
+  padding: 16px;
+}
+
+.registration-mini.health-count {
+  border-color: #dfeecd;
+  background: #fbfff6;
+}
+
+.registration-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.registration-head span {
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 950;
+}
+
+.registration-head b {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.registration-counts {
+  display: grid;
+  gap: 10px;
+}
+
+.registration-counts.two {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.registration-counts.one {
+  grid-template-columns: 1fr;
+}
+
+.registration-counts div {
+  border: 1px solid #dfeaf0;
+  border-radius: 16px;
+  background: white;
+  padding: 14px;
+}
+
+.registration-counts strong,
+.registration-counts span,
+.registration-counts small {
+  display: block;
+}
+
+.registration-counts strong {
+  color: #466070;
+  font-size: 13px;
+}
+
+.registration-counts span {
+  color: var(--ink);
+  font-size: 26px;
+  font-weight: 950;
+  letter-spacing: -0.04em;
+  margin-top: 2px;
+}
+
+.registration-counts small {
+  color: #78909d;
+  font-weight: 800;
+  margin-top: 2px;
+}
+
+.registration-panel {
+  margin: 20px 0 28px;
+}
+
+.health-registration {
+  border-top: 6px solid var(--green);
+}
+
+.walking-registration {
+  border-top: 6px solid var(--blue);
+}
+
+.registration-counts.detail span {
+  font-size: 34px;
+}
+
+@media (width <= 560px) {
+  .registration-head {
+    display: block;
+  }
+
+  .registration-counts.two {
     grid-template-columns: 1fr;
   }
 }
