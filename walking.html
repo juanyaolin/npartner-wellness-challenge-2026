@@ -5,7 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>健走步數排名賽｜N-Partner 三比八大賽 2026</title>
     <link rel="stylesheet" href="assets/css/styles.css" />
+    <script src="https://unpkg.com/papaparse@latest/papaparse.min.js"></script>
     <script src="assets/js/app.js" defer></script>
+    <script src="assets/js/members.js" defer></script>
   </head>
   <body class="detail-page walking-page">
     <nav class="nav">
@@ -57,7 +59,11 @@
           <h2>當前報名人數</h2>
         </div>
         <div class="registration-counts detail one">
-          <div><strong>總報名</strong><span>待更新</span><small>最低 18 人</small></div>
+          <div>
+            <strong>總報名</strong>
+            <span id="walking">待更新</span>
+            <small>最低 18 人</small>
+          </div>
         </div>
       </section>
       <section class="panel prize-panel walking-prizes">
