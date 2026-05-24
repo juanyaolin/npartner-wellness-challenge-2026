@@ -114,16 +114,22 @@ fetchAndProcessData(csvUrl)
         const { walking, healthMale, healthFemale } = data;
 
         const walkingEl = document.getElementById('walking');
-        walkingEl.innerHTML = walking.length;
-        walkingEl.style.color = walking.length >= 18 ? 'var(--blue)' : 'var(--red)';
+        if (walkingEl) {
+            walkingEl.innerHTML = walking.length;
+            walkingEl.style.color = walking.length >= 18 ? 'var(--blue)' : 'var(--red)';
+        }
         
         const healthMaleEl = document.getElementById('health-male');
-        healthMaleEl.innerHTML = healthMale.length;
-        healthMaleEl.style.color = healthMale.length >= 1 ? 'var(--blue)' : 'var(--red)';
+        if (healthMaleEl) {
+            healthMaleEl.innerHTML = healthMale.length;
+            healthMaleEl.style.color = healthMale.length >= 1 ? 'var(--blue)' : 'var(--red)';
+        }
         
         const healthFemaleEl = document.getElementById('health-female');
-        healthFemaleEl.innerHTML = healthFemale.length;
-        healthFemaleEl.style.color = healthFemale.length >= 9 ? 'var(--blue)' : 'var(--red)';
+        if (healthFemaleEl) {
+            healthFemaleEl.innerHTML = healthFemale.length;
+            healthFemaleEl.style.color = healthFemale.length >= 9 ? 'var(--blue)' : 'var(--red)';
+        }
     })
     .catch(err => {
         console.error("處理失敗:", err);
