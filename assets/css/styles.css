@@ -873,7 +873,7 @@ body.health-page {
 /* HAHAGO download and setup guide. */
 .downloadPanel {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 260px;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 520px);
   gap: 22px;
   align-items: center;
   background: white;
@@ -904,9 +904,17 @@ body.health-page {
   margin-top: 20px;
 }
 
-.qrCard {
+.qrGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(150px, 1fr));
+  gap: 16px;
   justify-self: end;
-  width: min(100%, 240px);
+  width: min(100%, 520px);
+}
+
+.qrCard {
+  justify-self: stretch;
+  width: 100%;
   border: 1px solid #dcecf2;
   border-radius: 26px;
   background: linear-gradient(180deg, #f7fcff, #fff);
@@ -989,9 +997,16 @@ body.hahago-page {
     grid-template-columns: 1fr;
   }
 
-  .qrCard {
+  .qrGrid {
+    grid-template-columns: 1fr;
     justify-self: stretch;
     width: min(100%, 320px);
+    margin: auto;
+  }
+
+  .qrCard {
+    justify-self: stretch;
+    width: 100%;
     margin: auto;
   }
 }
