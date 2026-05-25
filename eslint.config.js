@@ -5,7 +5,10 @@ export default [
       ecmaVersion: 2022,
       sourceType: "script",
       globals: {
+        console: "readonly",
         document: "readonly",
+        fetch: "readonly",
+        Papa: "readonly",
         window: "readonly",
       },
     },
