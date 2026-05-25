@@ -110,7 +110,7 @@ async function fetchAndProcessData(url) {
 }
 
 const csvUrl =
-  "https://docs.google.com/spreadsheets/d/e/2PACX-1vSkaq2Ik8cwrm8KIeGVz_9_2_2iQvOf0wigBfDeW06reolajK5jGn2CkxpI6pwXsV9CD2P1WibZCA2v/pub?gid=305624558&single=true&output=csv";
+  "https://docs.google.com/spreadsheets/d/e/2PACX-1vRpfm1uIwLNQzrP2gtPUsIRH-2ULN0P1uJY3RxZd3v0CepsFxMzJSeDctM4qOC6kuDdlQL3w5fnJLwI/pub?gid=1307008200&single=true&output=csv";
 
 fetchAndProcessData(csvUrl)
   .then((data) => {
