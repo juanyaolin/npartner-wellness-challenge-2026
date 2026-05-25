@@ -125,7 +125,7 @@ fetchAndProcessData(csvUrl)
     const healthMaleEl = document.getElementById("health-male");
     if (healthMaleEl) {
       healthMaleEl.innerHTML = healthMale.length;
-      healthMaleEl.style.color = healthMale.length >= 1 ? "var(--blue)" : "var(--red)";
+      healthMaleEl.style.color = healthMale.length >= 9 ? "var(--blue)" : "var(--red)";
     }
 
     const healthFemaleEl = document.getElementById("health-female");
