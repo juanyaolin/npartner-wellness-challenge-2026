@@ -9,6 +9,8 @@ export default [
         document: "readonly",
         fetch: "readonly",
         Papa: "readonly",
+        URL: "readonly",
+        URLSearchParams: "readonly",
         window: "readonly",
       },
     },

@@ -108,19 +108,19 @@ data/health-women.csv
 ```js
 const CONTESTS = {
   walking: {
-    label: '健走賽',
-    type: 'walking',
-    csvUrl: './data/walking.csv',
+    label: "健走賽",
+    type: "walking",
+    csvUrl: "./data/walking.csv",
   },
   healthMen: {
-    label: '男子健康賽',
-    type: 'health',
-    csvUrl: './data/health-men.csv',
+    label: "男子健康賽",
+    type: "health",
+    csvUrl: "./data/health-men.csv",
   },
   healthWomen: {
-    label: '女子健康賽',
-    type: 'health',
-    csvUrl: './data/health-women.csv',
+    label: "女子健康賽",
+    type: "health",
+    csvUrl: "./data/health-women.csv",
   },
 };
 ```

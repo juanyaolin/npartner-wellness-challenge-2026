@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/x-icon" href="favicon.ico" />
+    <title>賽況總覽｜N-Partner 三比八大賽 2026</title>
+    <link rel="stylesheet" href="assets/css/styles.css" />
+    <script src="https://unpkg.com/papaparse@latest/papaparse.min.js"></script>
+    <script src="assets/js/app.js" defer></script>
+    <script src="assets/js/status.js" defer></script>
+  </head>
+  <body class="status-page">
+    <nav class="nav">
+      <div class="wrap">
+        <a class="logo" href="index.html" aria-label="N-Partner 三比八大賽 2026 首頁">
+          <span class="logoMark"><img src="images/logo.png" alt="" /></span>
+          <span class="logoText">N-Partner</span>
+        </a>
+        <div class="links">
+          <a class="ghost" href="index.html#competitions">回首頁</a>
+          <a class="ghost" href="walking.html">健走賽</a>
+          <a class="ghost" href="health.html">健康賽</a>
+          <a class="primary" href="status.html" data-nav-link>賽況總覽</a>
+        </div>
+        <div class="links mobileOnly">
+          <a class="primary" href="status.html">賽況</a>
+        </div>
+      </div>
+    </nav>
+
+    <header class="detail-hero wrap status-hero">
+      <div class="eyebrow">即時賽況｜三個並列賽事</div>
+      <h1>賽況總覽</h1>
+      <p>
+        賽況資料來自 Google Sheet
+        CSV。健走賽依累計步數排序；健康賽分為男子組與女子組，依每期身體數據加權結果計算排名積分，並加總額外積分。
+      </p>
+    </header>
+
+    <main class="wrap status-shell" data-status-app>
+      <section class="status-tabs" aria-label="選擇賽事">
+        <button class="status-tab" type="button" data-contest-tab="walking">健走賽</button>
+        <button class="status-tab" type="button" data-contest-tab="health-men">男子健康賽</button>
+        <button class="status-tab" type="button" data-contest-tab="health-women">女子健康賽</button>
+      </section>
+
+      <section class="status-summary panel" aria-live="polite">
+        <div>
+          <span class="badge blue" data-contest-type>資料讀取中</span>
+          <h2 data-contest-title>賽況載入中...</h2>
+          <p data-contest-description>請稍候，正在載入 CSV 並整理排名資料。</p>
+        </div>
+        <div class="status-period-card">
+          <span>目前週期</span>
+          <strong data-current-period>--</strong>
+          <small data-current-range>--</small>
+        </div>
+      </section>
+
+      <section class="status-error panel" data-status-error hidden></section>
+
+      <section class="status-layout" data-walking-panel hidden>
+        <div class="panel chart-panel">
+          <div class="chart-head">
+            <div>
+              <h2>累計步數排名</h2>
+              <p>每 0.2 秒前進一個週期，長條依目前累計步數重新排序。</p>
+            </div>
+            <strong data-walking-frame>--</strong>
+          </div>
+          <div class="bar-race" data-walking-bars></div>
+        </div>
+        <aside class="panel detail-panel">
+          <h2>個人詳細資訊</h2>
+          <div class="participant-pills" data-walking-participants></div>
+          <div class="detail-card" data-walking-detail></div>
+        </aside>
+      </section>
+
+      <section class="status-layout" data-health-panel hidden>
+        <div class="status-main-column">
+          <div class="panel chart-panel">
+            <div class="chart-head">
+              <div>
+                <h2>積分長條圖</h2>
+                <p>每秒前進一個週期。實心代表排名積分，斜線代表額外積分。</p>
+              </div>
+              <strong data-health-frame>--</strong>
+            </div>
+            <div class="bar-race score-race" data-health-bars></div>
+          </div>
+          <div class="panel chart-panel">
+            <div class="chart-head">
+              <div>
+                <h2>加權百分比線圖</h2>
+                <p>只呈現每位參賽者每期身體數據加權後的百分比值。</p>
+              </div>
+            </div>
+            <div class="line-chart" data-health-weighted-chart></div>
+          </div>
+        </div>
+        <aside class="panel detail-panel">
+          <h2>個人詳細資訊</h2>
+          <div class="participant-pills" data-health-participants></div>
+          <div class="detail-card" data-health-detail></div>
+        </aside>
+      </section>
+    </main>
+
+    <footer class="footer">N-Partner｜三比八大賽 2026</footer>
+  </body>
+</html>
