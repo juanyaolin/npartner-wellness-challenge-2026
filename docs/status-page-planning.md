@@ -8,12 +8,26 @@
 - 主要用途：公司內部 / intranet 使用的活動介紹與賽況展示網站
 - 部署型態：靜態網站，目標可部署到 GitHub Pages
 - 專案路徑：`/mnt/c/www/npartner-wellness-challenge-2026`
+- 專案文件路徑：`/mnt/c/www/npartner-wellness-challenge-2026/docs/status-page-planning.md`
 - 目前重要頁面：
   - `index.html`：首頁
   - `hahago.html`：HAHAGO 說明頁
   - `walking.html`：健走賽介紹頁
   - `health.html`：健康賽介紹頁
   - `status.html`：預計新增的單一賽況頁
+
+### 1.1 專案目錄與維護原則
+
+- `/mnt/c/www/npartner-wellness-challenge-2026` 是正式 GitHub Pages 專案目錄，原則上只保留最新 production 檔案。
+- 版本化草稿、設計探索或非正式備份可放在 `/home/hermes/hahago-intro-page-sketches/00X` 這類草稿目錄，不要混入正式專案目錄。
+- 靜態網站檔案結構應維持清楚分層：
+  - HTML 頁面放在專案根目錄，例如 `index.html`、`walking.html`、`health.html`、`status.html`
+  - CSS 放在 `assets/css/`
+  - JavaScript 放在 `assets/js/`
+  - 圖片與 QR code 等媒體放在 `images/`
+  - CSV 或測試資料建議放在 `data/`
+  - 專案規劃與備忘文件放在 `docs/`
+- 交付前應執行可用的 formatter / linter / 檢查流程；若專案尚未配置工具，至少要檢查 HTML/CSS/JS 檔案結構、連結路徑與瀏覽器 console error。
 
 ## 2. 頁面導覽規劃
 
