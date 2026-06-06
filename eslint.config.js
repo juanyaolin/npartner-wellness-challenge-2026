@@ -7,6 +7,7 @@ export default [
       globals: {
         console: "readonly",
         document: "readonly",
+        echarts: "readonly",
         fetch: "readonly",
         Papa: "readonly",
         URL: "readonly",

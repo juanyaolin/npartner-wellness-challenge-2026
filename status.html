@@ -7,6 +7,7 @@
     <title>賽況總覽｜N-Partner 三比八大賽 2026</title>
     <link rel="stylesheet" href="assets/css/styles.css" />
     <script src="https://unpkg.com/papaparse@latest/papaparse.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
     <script src="assets/js/app.js" defer></script>
     <script src="assets/js/status.js" defer></script>
   </head>
@@ -52,7 +53,7 @@
           <p data-contest-description>請稍候，正在載入 CSV 並整理排名資料。</p>
         </div>
         <div class="status-period-card">
-          <span>目前週期</span>
+          <span>目前進度</span>
           <strong data-current-period>--</strong>
           <small data-current-range>--</small>
         </div>
@@ -65,14 +66,15 @@
           <div class="chart-head">
             <div>
               <h2>累計步數排名</h2>
-              <p>每 0.2 秒前進一個週期，長條依目前累計步數重新排序。</p>
+              <p>每 0.2 秒前進一天，長條依目前累計步數重新排序；可直接點擊長條查看個人資訊。</p>
             </div>
             <strong data-walking-frame>--</strong>
           </div>
-          <div class="bar-race" data-walking-bars></div>
+          <div class="chart-canvas walking-chart" data-walking-chart></div>
         </div>
         <aside class="panel detail-panel">
           <h2>個人詳細資訊</h2>
+          <p class="detail-hint">點擊主圖上的參賽者長條可切換資料。</p>
           <div class="participant-pills" data-walking-participants></div>
           <div class="detail-card" data-walking-detail></div>
         </aside>
@@ -84,24 +86,27 @@
             <div class="chart-head">
               <div>
                 <h2>積分長條圖</h2>
-                <p>每秒前進一個週期。實心代表排名積分，斜線代表額外積分。</p>
+                <p>
+                  每秒前進一個週期。實心代表排名積分，斜線代表額外積分；可直接點擊長條查看個人資訊。
+                </p>
               </div>
               <strong data-health-frame>--</strong>
             </div>
-            <div class="bar-race score-race" data-health-bars></div>
+            <div class="chart-canvas score-chart" data-health-score-chart></div>
           </div>
           <div class="panel chart-panel">
             <div class="chart-head">
               <div>
                 <h2>加權百分比線圖</h2>
-                <p>只呈現每位參賽者每期身體數據加權後的百分比值。</p>
+                <p>只呈現每位參賽者每期身體數據加權後的百分比值，每個節點皆顯示 marker。</p>
               </div>
             </div>
-            <div class="line-chart" data-health-weighted-chart></div>
+            <div class="chart-canvas line-chart" data-health-weighted-chart></div>
           </div>
         </div>
         <aside class="panel detail-panel">
           <h2>個人詳細資訊</h2>
+          <p class="detail-hint">點擊積分長條或線圖資料點可切換資料。</p>
           <div class="participant-pills" data-health-participants></div>
           <div class="detail-card" data-health-detail></div>
         </aside>

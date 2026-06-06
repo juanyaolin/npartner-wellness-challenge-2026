@@ -5,7 +5,8 @@ const STATUS_CONFIG = {
       type: "walking",
       csvUrl: "data/walking.csv",
       intervalMs: 200,
-      description: "男女混合排名賽，依每兩週週期步數累計排名。未提供資料的週期會以 0 步計算。",
+      description:
+        "男女混合排名賽，依每日累計步數排序。CSV 提供兩週期步數，前端會攤分成每日步數推進動畫。",
     },
     "health-men": {
       label: "男子健康賽",
@@ -55,6 +56,13 @@ const state = {
   dataCache: new Map(),
   timer: null,
   selectedParticipantId: null,
+  currentFrame: 0,
+  charts: {
+    walking: null,
+    healthScore: null,
+    healthWeighted: null,
+    detailDelta: null,
+  },
 };
 
 const els = {
@@ -66,12 +74,12 @@ const els = {
   currentRange: document.querySelector("[data-current-range]"),
   error: document.querySelector("[data-status-error]"),
   walkingPanel: document.querySelector("[data-walking-panel]"),
-  walkingBars: document.querySelector("[data-walking-bars]"),
+  walkingChart: document.querySelector("[data-walking-chart]"),
   walkingFrame: document.querySelector("[data-walking-frame]"),
   walkingParticipants: document.querySelector("[data-walking-participants]"),
   walkingDetail: document.querySelector("[data-walking-detail]"),
   healthPanel: document.querySelector("[data-health-panel]"),
-  healthBars: document.querySelector("[data-health-bars]"),
+  healthScoreChart: document.querySelector("[data-health-score-chart]"),
   healthFrame: document.querySelector("[data-health-frame]"),
   healthWeightedChart: document.querySelector("[data-health-weighted-chart]"),
   healthParticipants: document.querySelector("[data-health-participants]"),
@@ -85,9 +93,12 @@ if (app) {
 function initStatusPage() {
   els.tabs.forEach((tab) => {
     tab.addEventListener("click", () => {
-      const contest = tab.dataset.contestTab;
-      setActiveContest(contest);
+      setActiveContest(tab.dataset.contestTab);
     });
+  });
+
+  window.addEventListener("resize", () => {
+    Object.values(state.charts).forEach((chart) => chart?.resize());
   });
 
   setActiveContest(state.activeContest);
@@ -107,6 +118,7 @@ async function setActiveContest(contestKey) {
   state.timer = null;
   state.activeContest = contestKey;
   state.selectedParticipantId = null;
+  state.currentFrame = 0;
   updateUrlContest(contestKey);
   updateTabState(contestKey);
   setLoading(contest);
@@ -117,9 +129,7 @@ async function setActiveContest(contestKey) {
 
     if (contest.type === "walking") {
       renderWalking(data, 0);
-      startAnimation(contest.intervalMs, data.periods.length, (frame) =>
-        renderWalking(data, frame),
-      );
+      startAnimation(contest.intervalMs, data.days.length, (frame) => renderWalking(data, frame));
     } else {
       renderHealth(data, 0);
       startAnimation(contest.intervalMs, data.periods.length, (frame) => renderHealth(data, frame));
@@ -185,6 +195,7 @@ function parseCsv(csvText) {
 
 function normalizeWalking(rows) {
   const periods = collectPeriods(rows);
+  const days = periods.flatMap((period) => expandPeriodDays(period));
   const participantsMap = new Map();
 
   rows.forEach((row) => {
@@ -195,30 +206,46 @@ function normalizeWalking(rows) {
     const participant = ensureParticipant(participantsMap, id, readText(row, "參賽者暱稱"));
     participant.periodInput.set(periodId, {
       periodId,
-      startDate: readText(row, "週期開始日期"),
-      endDate: readText(row, "週期結束日期"),
       steps: readNumber(row, "週期步數"),
     });
   });
 
   const participants = Array.from(participantsMap.values()).map((participant, index) => {
     let cumulativeSteps = 0;
-    const periodRows = periods.map((period) => {
+    const dailyFrames = [];
+    const periodFrames = [];
+
+    periods.forEach((period) => {
       const input = participant.periodInput.get(period.periodId);
-      const steps = input?.steps || 0;
-      cumulativeSteps += steps;
-      return {
+      const periodSteps = input?.steps || 0;
+      const periodDays = expandPeriodDays(period);
+      const dailySteps = distributeSteps(periodSteps, periodDays.length);
+      const periodStartCumulative = cumulativeSteps;
+
+      periodDays.forEach((day, dayIndex) => {
+        cumulativeSteps += dailySteps[dayIndex];
+        dailyFrames.push({
+          ...day,
+          steps: dailySteps[dayIndex],
+          periodSteps,
+          cumulativeSteps,
+        });
+      });
+
+      periodFrames.push({
         ...period,
-        steps,
+        steps: periodSteps,
         cumulativeSteps,
-      };
+        periodStartCumulative,
+      });
     });
 
     return {
       id: participant.id,
       nickname: participant.nickname,
       color: STATUS_CONFIG.colors[index % STATUS_CONFIG.colors.length],
-      periods: periodRows,
+      dailyFrames,
+      periods: periodFrames,
       totalSteps: cumulativeSteps,
     };
   });
@@ -227,6 +254,7 @@ function normalizeWalking(rows) {
     type: "walking",
     participants,
     periods,
+    days,
   };
 }
 
@@ -291,7 +319,7 @@ function normalizeHealth(rows) {
           item.id,
           {
             rank: index + 1,
-            rankingPoints: item.hasData ? Math.max(participantCount - index, 1) : 0,
+            rankingPoints: item.hasData ? Math.max(participantCount - index + 1, 1) : 0,
           },
         ]),
       ),
@@ -388,6 +416,45 @@ function calculateWeightedPercent(period) {
   );
 }
 
+function expandPeriodDays(period) {
+  const startDate = parseDate(period.startDate);
+  const endDate = parseDate(period.endDate);
+  const dayCount = Math.max(Math.round((endDate - startDate) / 86400000) + 1, 1);
+
+  return Array.from({ length: dayCount }, (_, index) => {
+    const current = new Date(startDate);
+    current.setDate(startDate.getDate() + index);
+    return {
+      periodId: period.periodId,
+      startDate: period.startDate,
+      endDate: period.endDate,
+      date: formatDate(current),
+      dayIndex: index + 1,
+      dayCount,
+    };
+  });
+}
+
+function distributeSteps(periodSteps, dayCount) {
+  const baseSteps = Math.floor(periodSteps / dayCount);
+  const remainder = periodSteps - baseSteps * dayCount;
+  return Array.from({ length: dayCount }, (_, index) =>
+    index === dayCount - 1 ? baseSteps + remainder : baseSteps,
+  );
+}
+
+function parseDate(value) {
+  const [year, month, day] = value.split(/[/-]/).map((part) => Number(part));
+  return new Date(year, month - 1, day);
+}
+
+function formatDate(value) {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  const day = String(value.getDate()).padStart(2, "0");
+  return `${year}/${month}/${day}`;
+}
+
 function startAnimation(intervalMs, frameCount, render) {
   let frame = 0;
 
@@ -406,51 +473,87 @@ function startAnimation(intervalMs, frameCount, render) {
 
 function renderWalking(data, frame) {
   const contest = STATUS_CONFIG.contests[state.activeContest];
-  const period = data.periods[frame];
-  const ranked = data.participants
+  const day = data.days[frame];
+  const ranked = getWalkingRanked(data, frame);
+
+  state.currentFrame = frame;
+  ensureSelectedParticipant(data.participants, ranked);
+  updateSummary(contest, day, `${frame + 1} / ${data.days.length}`);
+  els.walkingPanel.hidden = false;
+  els.healthPanel.hidden = true;
+  els.walkingFrame.textContent = `第 ${frame + 1} 天 / ${data.days.length} 天`;
+  els.walkingParticipants.innerHTML = renderParticipantButtons(data.participants, "walking");
+  els.walkingDetail.innerHTML = renderWalkingDetail(data, ranked, frame);
+  renderWalkingChart(ranked, frame);
+  bindParticipantButtons();
+}
+
+function getWalkingRanked(data, frame) {
+  return data.participants
     .map((participant) => ({
       ...participant,
-      current: participant.periods[frame],
+      current: participant.dailyFrames[frame],
     }))
     .sort(
       (a, b) =>
         b.current.cumulativeSteps - a.current.cumulativeSteps ||
         a.nickname.localeCompare(b.nickname, "zh-Hant"),
     );
-
-  if (
-    !state.selectedParticipantId ||
-    !data.participants.some((item) => item.id === state.selectedParticipantId)
-  ) {
-    state.selectedParticipantId = ranked[0]?.id || null;
-  }
-
-  updateSummary(contest, period, `${frame + 1} / ${data.periods.length}`);
-  els.walkingPanel.hidden = false;
-  els.healthPanel.hidden = true;
-  els.walkingFrame.textContent = `週期 ${frame + 1} / ${data.periods.length}`;
-  els.walkingBars.innerHTML = ranked
-    .map((participant, index) =>
-      renderWalkingBar(participant, index, ranked[0].current.cumulativeSteps),
-    )
-    .join("");
-  els.walkingParticipants.innerHTML = renderParticipantButtons(data.participants, "walking");
-  els.walkingDetail.innerHTML = renderWalkingDetail(data, ranked, frame);
-  bindParticipantButtons();
 }
 
-function renderWalkingBar(participant, index, maxSteps) {
-  const width = maxSteps ? Math.max((participant.current.cumulativeSteps / maxSteps) * 100, 2) : 2;
-  return `
-    <div class="race-row">
-      <span class="race-rank">${index + 1}</span>
-      <span class="race-name">${escapeHtml(participant.nickname)}</span>
-      <div class="race-track">
-        <div class="race-fill" style="width: ${width}%; background: ${participant.color}"></div>
-      </div>
-      <strong>${formatNumber(participant.current.cumulativeSteps)} 步</strong>
-    </div>
-  `;
+function renderWalkingChart(ranked, frame) {
+  const chart = getChart("walking", els.walkingChart);
+  const labels = ranked.map((participant) => participant.nickname);
+  const values = ranked.map((participant) => ({
+    value: participant.current.cumulativeSteps,
+    id: participant.id,
+    itemStyle: { color: participant.color },
+  }));
+
+  chart.setOption({
+    animationDuration: 250,
+    animationDurationUpdate: 450,
+    animationEasing: "cubicOut",
+    animationEasingUpdate: "cubicInOut",
+    grid: { top: 12, right: 112, bottom: 24, left: 88 },
+    tooltip: {
+      trigger: "item",
+      formatter: (params) =>
+        `${escapeHtml(params.name)}<br/>累計：${formatNumber(params.value)} 步`,
+    },
+    xAxis: {
+      type: "value",
+      axisLabel: { formatter: (value) => formatCompactNumber(value) },
+      splitLine: { lineStyle: { color: "#e6f0f4" } },
+    },
+    yAxis: {
+      type: "category",
+      inverse: true,
+      data: labels,
+      axisLabel: { color: "#466070", fontWeight: 800 },
+    },
+    series: [
+      {
+        type: "bar",
+        data: values,
+        realtimeSort: true,
+        barMaxWidth: 22,
+        label: {
+          show: true,
+          position: "right",
+          formatter: (params) => `${formatNumber(params.value)} 步`,
+          color: "#10202b",
+          fontWeight: 800,
+        },
+        universalTransition: true,
+      },
+    ],
+  });
+
+  replaceChartClick(chart, (params) => {
+    state.selectedParticipantId = params.data.id;
+    renderWalking(state.dataCache.get(state.activeContest), frame);
+  });
 }
 
 function renderWalkingDetail(data, ranked, frame) {
@@ -458,36 +561,53 @@ function renderWalkingDetail(data, ranked, frame) {
     data.participants.find((item) => item.id === state.selectedParticipantId) || ranked[0];
   if (!participant) return "<p>尚無參賽者資料。</p>";
 
-  const current = participant.periods[frame];
+  const current = participant.dailyFrames[frame];
   const rank = ranked.findIndex((item) => item.id === participant.id) + 1;
   const previous = ranked[rank - 2];
   const next = ranked[rank];
-  const average = Math.round(current.cumulativeSteps / (frame + 1));
-  const bestPeriod = participant.periods
+  const periodFrame = participant.periods.find((period) => period.periodId === current.periodId);
+  const bestDay = participant.dailyFrames
     .slice(0, frame + 1)
-    .reduce((best, item) => (item.steps > best.steps ? item : best), participant.periods[0]);
+    .reduce((best, item) => (item.steps > best.steps ? item : best), participant.dailyFrames[0]);
 
   return `
     <div class="detail-heading" style="--participant-color: ${participant.color}">
       <span></span>
-      <div><strong>${escapeHtml(participant.nickname)}</strong><small>目前第 ${rank} 名</small></div>
+      <div><strong>${escapeHtml(participant.nickname)}</strong><small>目前第 ${rank} 名｜${current.date}</small></div>
     </div>
     <div class="metric-grid">
       ${renderMetric("累計步數", `${formatNumber(current.cumulativeSteps)} 步`)}
-      ${renderMetric("本週期步數", `${formatNumber(current.steps)} 步`)}
-      ${renderMetric("平均每週期", `${formatNumber(average)} 步`)}
-      ${renderMetric("最高單週期", `${formatNumber(bestPeriod.steps)} 步`)}
+      ${renderMetric("今日步數", `${formatNumber(current.steps)} 步`)}
+      ${renderMetric("本週期累計", `${formatNumber(current.cumulativeSteps - periodFrame.periodStartCumulative)} 步`)}
+      ${renderMetric("本週期總步數", `${formatNumber(periodFrame.steps)} 步`)}
+      ${renderMetric("最高單日", `${formatNumber(bestDay.steps)} 步`)}
       ${renderMetric("與前一名差距", previous ? `${formatNumber(previous.current.cumulativeSteps - current.cumulativeSteps)} 步` : "--")}
       ${renderMetric("與下一名差距", next ? `${formatNumber(current.cumulativeSteps - next.current.cumulativeSteps)} 步` : "--")}
     </div>
-    ${renderMiniBars(participant.periods.slice(0, frame + 1), "steps", participant.color, "步")}
   `;
 }
 
 function renderHealth(data, frame) {
   const contest = STATUS_CONFIG.contests[state.activeContest];
   const period = data.periods[frame];
-  const ranked = data.participants
+  const ranked = getHealthRanked(data, frame);
+
+  state.currentFrame = frame;
+  ensureSelectedParticipant(data.participants, ranked);
+  updateSummary(contest, period, `${frame + 1} / ${data.periods.length}`);
+  els.walkingPanel.hidden = true;
+  els.healthPanel.hidden = false;
+  els.healthFrame.textContent = `週期 ${frame + 1} / ${data.periods.length}`;
+  els.healthParticipants.innerHTML = renderParticipantButtons(data.participants, "health");
+  els.healthDetail.innerHTML = renderHealthDetail(data, ranked, frame);
+  renderHealthScoreChart(ranked, frame);
+  renderHealthWeightedChart(data, frame);
+  renderDetailDeltaChart(data, frame);
+  bindParticipantButtons();
+}
+
+function getHealthRanked(data, frame) {
+  return data.participants
     .map((participant) => ({
       ...participant,
       current: participant.periods[frame],
@@ -497,46 +617,127 @@ function renderHealth(data, frame) {
         b.current.totalPoints - a.current.totalPoints ||
         b.current.weightedPercent - a.current.weightedPercent,
     );
-
-  if (
-    !state.selectedParticipantId ||
-    !data.participants.some((item) => item.id === state.selectedParticipantId)
-  ) {
-    state.selectedParticipantId = ranked[0]?.id || null;
-  }
-
-  updateSummary(contest, period, `${frame + 1} / ${data.periods.length}`);
-  els.walkingPanel.hidden = true;
-  els.healthPanel.hidden = false;
-  els.healthFrame.textContent = `週期 ${frame + 1} / ${data.periods.length}`;
-  els.healthBars.innerHTML = ranked
-    .map((participant, index) => renderHealthBar(participant, index, ranked[0].current.totalPoints))
-    .join("");
-  els.healthWeightedChart.innerHTML = renderLineChart(
-    data.participants,
-    frame,
-    "weightedPercent",
-    "%",
-  );
-  els.healthParticipants.innerHTML = renderParticipantButtons(data.participants, "health");
-  els.healthDetail.innerHTML = renderHealthDetail(data, ranked, frame);
-  bindParticipantButtons();
 }
 
-function renderHealthBar(participant, index, maxPoints) {
-  const rankingWidth = maxPoints ? (participant.current.rankingPointsTotal / maxPoints) * 100 : 0;
-  const extraWidth = maxPoints ? (participant.current.extraPointsTotal / maxPoints) * 100 : 0;
-  return `
-    <div class="race-row score-row">
-      <span class="race-rank">${index + 1}</span>
-      <span class="race-name">${escapeHtml(participant.nickname)}</span>
-      <div class="race-track stacked-track">
-        <div class="race-fill" style="width: ${rankingWidth}%; background: ${participant.color}"></div>
-        <div class="race-fill extra-fill" style="width: ${extraWidth}%; background-color: ${participant.color}"></div>
-      </div>
-      <strong>${formatNumber(participant.current.totalPoints)} 分</strong>
-    </div>
-  `;
+function renderHealthScoreChart(ranked, frame) {
+  const chart = getChart("healthScore", els.healthScoreChart);
+  const labels = ranked.map((participant) => participant.nickname);
+
+  chart.setOption({
+    animationDuration: 350,
+    animationDurationUpdate: 650,
+    animationEasingUpdate: "cubicInOut",
+    color: STATUS_CONFIG.colors,
+    grid: { top: 12, right: 88, bottom: 24, left: 88 },
+    tooltip: {
+      trigger: "axis",
+      axisPointer: { type: "shadow" },
+    },
+    legend: { bottom: 0, data: ["排名積分", "額外積分"] },
+    xAxis: {
+      type: "value",
+      splitLine: { lineStyle: { color: "#e6f0f4" } },
+    },
+    yAxis: {
+      type: "category",
+      inverse: true,
+      data: labels,
+      axisLabel: { color: "#466070", fontWeight: 800 },
+    },
+    series: [
+      {
+        name: "排名積分",
+        type: "bar",
+        stack: "points",
+        data: ranked.map((participant) => ({
+          value: participant.current.rankingPointsTotal,
+          id: participant.id,
+          itemStyle: { color: participant.color },
+        })),
+        barMaxWidth: 22,
+        universalTransition: true,
+      },
+      {
+        name: "額外積分",
+        type: "bar",
+        stack: "points",
+        data: ranked.map((participant) => ({
+          value: participant.current.extraPointsTotal,
+          id: participant.id,
+          itemStyle: {
+            color: participant.color,
+            decal: {
+              symbol: "rect",
+              dashArrayX: [2, 2],
+              dashArrayY: [6, 4],
+              rotation: Math.PI / 4,
+              color: "rgba(255,255,255,0.55)",
+            },
+          },
+        })),
+        label: {
+          show: true,
+          position: "right",
+          formatter: (params) => {
+            const participant = ranked[params.dataIndex];
+            return `${formatNumber(participant.current.totalPoints)} 分`;
+          },
+          color: "#10202b",
+          fontWeight: 800,
+        },
+        universalTransition: true,
+      },
+    ],
+  });
+
+  replaceChartClick(chart, (params) => {
+    state.selectedParticipantId = params.data.id;
+    renderHealth(state.dataCache.get(state.activeContest), frame);
+  });
+}
+
+function renderHealthWeightedChart(data, frame) {
+  const chart = getChart("healthWeighted", els.healthWeightedChart);
+  const periods = data.periods.slice(0, frame + 1).map((period) => period.periodId);
+
+  chart.setOption({
+    animationDurationUpdate: 450,
+    grid: { top: 24, right: 26, bottom: 64, left: 48 },
+    tooltip: {
+      trigger: "axis",
+      valueFormatter: (value) => `${formatDecimal(value)}%`,
+    },
+    legend: {
+      type: "scroll",
+      bottom: 0,
+      data: data.participants.map((participant) => participant.nickname),
+    },
+    xAxis: { type: "category", data: periods, boundaryGap: false },
+    yAxis: {
+      type: "value",
+      axisLabel: { formatter: "{value}%" },
+      splitLine: { lineStyle: { color: "#e6f0f4" } },
+    },
+    series: data.participants.map((participant) => ({
+      id: participant.id,
+      name: participant.nickname,
+      type: "line",
+      showSymbol: true,
+      symbol: "circle",
+      symbolSize: 8,
+      emphasis: { focus: "series" },
+      itemStyle: { color: participant.color },
+      lineStyle: { color: participant.color, width: 2 },
+      data: participant.periods.slice(0, frame + 1).map((period) => period.weightedPercent),
+    })),
+  });
+
+  replaceChartClick(chart, (params) => {
+    const participant = data.participants.find((item) => item.nickname === params.seriesName);
+    if (!participant) return;
+    state.selectedParticipantId = participant.id;
+    renderHealth(data, frame);
+  });
 }
 
 function renderHealthDetail(data, ranked, frame) {
@@ -562,17 +763,84 @@ function renderHealthDetail(data, ranked, frame) {
       ${renderMetric("累計骨骼肌增加", `${formatDecimal(current.cumulativeSkeletalMuscleGainPercent)}%`)}
     </div>
     <h3 class="detail-subtitle">三項累計變化量</h3>
-    ${renderParticipantDeltaChart(participant.periods.slice(0, frame + 1))}
+    <div class="detail-delta-chart" data-detail-delta-chart></div>
   `;
 }
 
-function updateSummary(contest, period, frameLabel) {
+function renderDetailDeltaChart(data, frame) {
+  const container = document.querySelector("[data-detail-delta-chart]");
+  if (!container) return;
+
+  const participant = data.participants.find((item) => item.id === state.selectedParticipantId);
+  if (!participant) return;
+
+  const periods = participant.periods.slice(0, frame + 1);
+  const chart = getChart("detailDelta", container);
+  chart.setOption({
+    animationDurationUpdate: 450,
+    grid: { top: 24, right: 22, bottom: 30, left: 42 },
+    tooltip: {
+      trigger: "axis",
+      valueFormatter: (value) => `${formatDecimal(value)}%`,
+    },
+    legend: { top: 0, data: ["體重", "體脂肪", "骨骼肌"] },
+    xAxis: { type: "category", data: periods.map((period) => period.periodId), boundaryGap: false },
+    yAxis: {
+      type: "value",
+      axisLabel: { formatter: "{value}%" },
+      splitLine: { lineStyle: { color: "#e6f0f4" } },
+    },
+    series: [
+      {
+        name: "體重",
+        type: "line",
+        showSymbol: true,
+        symbolSize: 9,
+        itemStyle: { color: "#168bd7" },
+        data: periods.map((period) => period.cumulativeWeightLossPercent),
+      },
+      {
+        name: "體脂肪",
+        type: "line",
+        showSymbol: true,
+        symbolSize: 9,
+        itemStyle: { color: "#86c440" },
+        data: periods.map((period) => period.cumulativeBodyFatLossPercent),
+      },
+      {
+        name: "骨骼肌",
+        type: "line",
+        showSymbol: true,
+        symbolSize: 9,
+        itemStyle: { color: "#e67b50" },
+        data: periods.map((period) => period.cumulativeSkeletalMuscleGainPercent),
+      },
+    ],
+  });
+}
+
+function updateSummary(contest, frame, frameLabel) {
   els.error.hidden = true;
   els.title.textContent = contest.label;
   els.type.textContent = contest.type === "walking" ? "步數排名" : "健康積分";
   els.description.textContent = contest.description;
-  els.currentPeriod.textContent = period?.periodId || frameLabel;
-  els.currentRange.textContent = period ? `${period.startDate} - ${period.endDate}` : "--";
+  els.currentPeriod.textContent = frame?.periodId || frameLabel;
+
+  if (contest.type === "walking" && frame?.date) {
+    els.currentRange.textContent = `${frame.date}｜${frame.periodId} 第 ${frame.dayIndex} / ${frame.dayCount} 天`;
+    return;
+  }
+
+  els.currentRange.textContent = frame ? `${frame.startDate} - ${frame.endDate}` : "--";
+}
+
+function ensureSelectedParticipant(participants, ranked) {
+  if (
+    !state.selectedParticipantId ||
+    !participants.some((item) => item.id === state.selectedParticipantId)
+  ) {
+    state.selectedParticipantId = ranked[0]?.id || null;
+  }
 }
 
 function renderParticipantButtons(participants, group) {
@@ -588,12 +856,10 @@ function bindParticipantButtons() {
   document.querySelectorAll("[data-participant-id]").forEach((button) => {
     button.addEventListener("click", () => {
       state.selectedParticipantId = button.dataset.participantId;
-      const currentFrameText = (els.currentPeriod.textContent || "").match(/\d+/)?.[0];
-      const frameIndex = Math.max(Number(currentFrameText || 1) - 1, 0);
       const data = state.dataCache.get(state.activeContest);
       if (!data) return;
-      if (data.type === "walking") renderWalking(data, frameIndex);
-      if (data.type === "health") renderHealth(data, frameIndex);
+      if (data.type === "walking") renderWalking(data, state.currentFrame);
+      if (data.type === "health") renderHealth(data, state.currentFrame);
     });
   });
 }
@@ -602,104 +868,18 @@ function renderMetric(label, value) {
   return `<div class="metric"><span>${label}</span><strong>${value}</strong></div>`;
 }
 
-function renderMiniBars(periods, key, color, unit) {
-  const max = Math.max(...periods.map((period) => period[key]), 1);
-  return `
-    <div class="mini-bars" aria-label="歷週期資料">
-      ${periods
-        .map((period) => {
-          const height = Math.max((period[key] / max) * 100, 6);
-          return `<div class="mini-bar"><span style="height: ${height}%; background: ${color}"></span><small>${period.periodId}</small><b>${formatNumber(period[key])}${unit}</b></div>`;
-        })
-        .join("")}
-    </div>
-  `;
+function getChart(key, element) {
+  if (!state.charts[key] || state.charts[key].getDom() !== element) {
+    state.charts[key]?.dispose();
+    state.charts[key] = echarts.init(element);
+  }
+
+  return state.charts[key];
 }
 
-function renderLineChart(participants, frame, key, unit) {
-  const series = participants.map((participant) => ({
-    label: participant.nickname,
-    color: participant.color,
-    values: participant.periods.slice(0, frame + 1).map((period) => ({
-      label: period.periodId,
-      value: period[key],
-    })),
-  }));
-
-  return renderSvgLineChart(series, unit);
-}
-
-function renderParticipantDeltaChart(periods) {
-  return renderSvgLineChart(
-    [
-      {
-        label: "體重",
-        color: "#168bd7",
-        values: periods.map((period) => ({
-          label: period.periodId,
-          value: period.cumulativeWeightLossPercent,
-        })),
-      },
-      {
-        label: "體脂肪",
-        color: "#86c440",
-        values: periods.map((period) => ({
-          label: period.periodId,
-          value: period.cumulativeBodyFatLossPercent,
-        })),
-      },
-      {
-        label: "骨骼肌",
-        color: "#e67b50",
-        values: periods.map((period) => ({
-          label: period.periodId,
-          value: period.cumulativeSkeletalMuscleGainPercent,
-        })),
-      },
-    ],
-    "%",
-  );
-}
-
-function renderSvgLineChart(series, unit) {
-  const width = 760;
-  const height = 280;
-  const padding = 36;
-  const values = series.flatMap((item) => item.values.map((point) => point.value));
-  const min = Math.min(...values, 0);
-  const max = Math.max(...values, 1);
-  const range = max - min || 1;
-  const pointCount = Math.max(...series.map((item) => item.values.length), 1);
-
-  const lines = series
-    .map((item) => {
-      const points = item.values
-        .map((point, index) => {
-          const x = padding + (index / Math.max(pointCount - 1, 1)) * (width - padding * 2);
-          const y = height - padding - ((point.value - min) / range) * (height - padding * 2);
-          return `${x.toFixed(1)},${y.toFixed(1)}`;
-        })
-        .join(" ");
-      return `<polyline points="${points}" fill="none" stroke="${item.color}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />`;
-    })
-    .join("");
-
-  const legends = series
-    .map(
-      (item) => `<span><i style="background: ${item.color}"></i>${escapeHtml(item.label)}</span>`,
-    )
-    .join("");
-
-  return `
-    <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="線圖">
-      <line x1="${padding}" x2="${width - padding}" y1="${height - padding}" y2="${height - padding}" stroke="#d7e9ef" />
-      <line x1="${padding}" x2="${padding}" y1="${padding}" y2="${height - padding}" stroke="#d7e9ef" />
-      <text x="${padding}" y="24" fill="#5c7180" font-size="14">${formatDecimal(max)}${unit}</text>
-      <text x="${padding}" y="${height - 8}" fill="#5c7180" font-size="14">${formatDecimal(min)}${unit}</text>
-      ${lines}
-    </svg>
-    <div class="chart-legend">${legends}</div>
-  `;
+function replaceChartClick(chart, handler) {
+  chart.off("click");
+  chart.on("click", handler);
 }
 
 function readText(row, key) {
@@ -724,6 +904,11 @@ function formatDecimal(value) {
     maximumFractionDigits: 2,
     minimumFractionDigits: 0,
   });
+}
+
+function formatCompactNumber(value) {
+  if (value >= 10000) return `${Math.round(value / 10000)}萬`;
+  return formatNumber(value);
 }
 
 function showError(error) {
