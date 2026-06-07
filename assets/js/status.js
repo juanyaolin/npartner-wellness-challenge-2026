@@ -328,7 +328,7 @@ function normalizeHealth(rows) {
           item.id,
           {
             rank: index + 1,
-            rankingPoints: item.hasData ? Math.max(participantCount - index + 1, 1) : 0,
+            rankingPoints: item.hasData ? calculateRankingPoints(index, participantCount) : 0,
           },
         ]),
       ),
@@ -424,6 +424,11 @@ function calculateWeightedPercent(period) {
     period.bodyFatLossPercent * weights.bodyFatLossWeight +
     period.skeletalMuscleGainPercent * weights.skeletalMuscleGainWeight
   );
+}
+
+function calculateRankingPoints(rankIndex, participantCount) {
+  if (participantCount <= 0) return 0;
+  return participantCount - rankIndex;
 }
 
 function expandPeriodDays(period) {
@@ -632,7 +637,8 @@ function getHealthRanked(data, frame) {
     .sort(
       (a, b) =>
         b.current.totalPoints - a.current.totalPoints ||
-        b.current.weightedPercent - a.current.weightedPercent,
+        b.current.weightedPercent - a.current.weightedPercent ||
+        a.nickname.localeCompare(b.nickname, "zh-Hant"),
     );
 }
 
