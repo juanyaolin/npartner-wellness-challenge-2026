@@ -99,6 +99,7 @@ function initStatusPage() {
 
   window.addEventListener("resize", () => {
     Object.values(state.charts).forEach((chart) => chart?.resize());
+    rerenderActiveContest();
   });
 
   setActiveContest(state.activeContest);
@@ -515,7 +516,7 @@ function renderWalkingChart(ranked, frame) {
     animationDurationUpdate: 450,
     animationEasing: "cubicOut",
     animationEasingUpdate: "cubicInOut",
-    grid: { top: 12, right: 112, bottom: 24, left: 88 },
+    grid: { top: 12, right: 12, bottom: 18, left: 12, containLabel: false },
     tooltip: {
       trigger: "item",
       formatter: (params) =>
@@ -523,27 +524,34 @@ function renderWalkingChart(ranked, frame) {
     },
     xAxis: {
       type: "value",
-      axisLabel: { formatter: (value) => formatCompactNumber(value) },
-      splitLine: { lineStyle: { color: "#e6f0f4" } },
+      axisLabel: { show: false },
+      axisLine: { show: false },
+      axisTick: { show: false },
+      splitLine: { show: false },
     },
     yAxis: {
       type: "category",
       inverse: true,
       data: labels,
-      axisLabel: { color: "#466070", fontWeight: 800 },
+      axisLabel: { show: false },
+      axisLine: { show: false },
+      axisTick: { show: false },
     },
     series: [
       {
         type: "bar",
         data: values,
         realtimeSort: true,
-        barMaxWidth: 22,
+        barMaxWidth: 30,
         label: {
           show: true,
-          position: "right",
-          formatter: (params) => `${formatNumber(params.value)} 步`,
-          color: "#10202b",
-          fontWeight: 800,
+          position: "insideLeft",
+          formatter: (params) => `${params.name}｜${formatCompactNumber(params.value)} 步`,
+          color: "white",
+          fontWeight: 900,
+          padding: [0, 0, 0, 8],
+          textShadowBlur: 4,
+          textShadowColor: "rgba(0,0,0,0.35)",
         },
         universalTransition: true,
       },
@@ -628,7 +636,7 @@ function renderHealthScoreChart(ranked, frame) {
     animationDurationUpdate: 650,
     animationEasingUpdate: "cubicInOut",
     color: STATUS_CONFIG.colors,
-    grid: { top: 12, right: 88, bottom: 24, left: 88 },
+    grid: { top: 12, right: 12, bottom: 42, left: 12, containLabel: false },
     tooltip: {
       trigger: "axis",
       axisPointer: { type: "shadow" },
@@ -636,13 +644,18 @@ function renderHealthScoreChart(ranked, frame) {
     legend: { bottom: 0, data: ["排名積分", "額外積分"] },
     xAxis: {
       type: "value",
-      splitLine: { lineStyle: { color: "#e6f0f4" } },
+      axisLabel: { show: false },
+      axisLine: { show: false },
+      axisTick: { show: false },
+      splitLine: { show: false },
     },
     yAxis: {
       type: "category",
       inverse: true,
       data: labels,
-      axisLabel: { color: "#466070", fontWeight: 800 },
+      axisLabel: { show: false },
+      axisLine: { show: false },
+      axisTick: { show: false },
     },
     series: [
       {
@@ -654,7 +667,20 @@ function renderHealthScoreChart(ranked, frame) {
           id: participant.id,
           itemStyle: { color: participant.color },
         })),
-        barMaxWidth: 22,
+        barMaxWidth: 30,
+        label: {
+          show: true,
+          position: "insideLeft",
+          formatter: (params) => {
+            const participant = ranked[params.dataIndex];
+            return `${participant.nickname}｜${formatNumber(participant.current.totalPoints)} 分`;
+          },
+          color: "white",
+          fontWeight: 900,
+          padding: [0, 0, 0, 8],
+          textShadowBlur: 4,
+          textShadowColor: "rgba(0,0,0,0.35)",
+        },
         universalTransition: true,
       },
       {
@@ -675,16 +701,6 @@ function renderHealthScoreChart(ranked, frame) {
             },
           },
         })),
-        label: {
-          show: true,
-          position: "right",
-          formatter: (params) => {
-            const participant = ranked[params.dataIndex];
-            return `${formatNumber(participant.current.totalPoints)} 分`;
-          },
-          color: "#10202b",
-          fontWeight: 800,
-        },
         universalTransition: true,
       },
     ],
@@ -762,8 +778,6 @@ function renderHealthDetail(data, ranked, frame) {
       ${renderMetric("累計體脂減少", `${formatDecimal(current.cumulativeBodyFatLossPercent)}%`)}
       ${renderMetric("累計骨骼肌增加", `${formatDecimal(current.cumulativeSkeletalMuscleGainPercent)}%`)}
     </div>
-    <h3 class="detail-subtitle">三項累計變化量</h3>
-    <div class="detail-delta-chart" data-detail-delta-chart></div>
   `;
 }
 
@@ -774,7 +788,10 @@ function renderDetailDeltaChart(data, frame) {
   const participant = data.participants.find((item) => item.id === state.selectedParticipantId);
   if (!participant) return;
 
-  const periods = participant.periods.slice(0, frame + 1);
+  const periodLabels = data.periods.map((period) => period.periodId);
+  const visiblePeriods = participant.periods.map((period, index) =>
+    index <= frame ? period : null,
+  );
   const chart = getChart("detailDelta", container);
   chart.setOption({
     animationDurationUpdate: 450,
@@ -784,7 +801,7 @@ function renderDetailDeltaChart(data, frame) {
       valueFormatter: (value) => `${formatDecimal(value)}%`,
     },
     legend: { top: 0, data: ["體重", "體脂肪", "骨骼肌"] },
-    xAxis: { type: "category", data: periods.map((period) => period.periodId), boundaryGap: false },
+    xAxis: { type: "category", data: periodLabels, boundaryGap: false },
     yAxis: {
       type: "value",
       axisLabel: { formatter: "{value}%" },
@@ -797,7 +814,7 @@ function renderDetailDeltaChart(data, frame) {
         showSymbol: true,
         symbolSize: 9,
         itemStyle: { color: "#168bd7" },
-        data: periods.map((period) => period.cumulativeWeightLossPercent),
+        data: visiblePeriods.map((period) => period?.cumulativeWeightLossPercent ?? null),
       },
       {
         name: "體脂肪",
@@ -805,7 +822,7 @@ function renderDetailDeltaChart(data, frame) {
         showSymbol: true,
         symbolSize: 9,
         itemStyle: { color: "#86c440" },
-        data: periods.map((period) => period.cumulativeBodyFatLossPercent),
+        data: visiblePeriods.map((period) => period?.cumulativeBodyFatLossPercent ?? null),
       },
       {
         name: "骨骼肌",
@@ -813,7 +830,7 @@ function renderDetailDeltaChart(data, frame) {
         showSymbol: true,
         symbolSize: 9,
         itemStyle: { color: "#e67b50" },
-        data: periods.map((period) => period.cumulativeSkeletalMuscleGainPercent),
+        data: visiblePeriods.map((period) => period?.cumulativeSkeletalMuscleGainPercent ?? null),
       },
     ],
   });
@@ -866,6 +883,13 @@ function bindParticipantButtons() {
 
 function renderMetric(label, value) {
   return `<div class="metric"><span>${label}</span><strong>${value}</strong></div>`;
+}
+
+function rerenderActiveContest() {
+  const data = state.dataCache.get(state.activeContest);
+  if (!data) return;
+  if (data.type === "walking") renderWalking(data, state.currentFrame);
+  if (data.type === "health") renderHealth(data, state.currentFrame);
 }
 
 function getChart(key, element) {

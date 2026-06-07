@@ -64,11 +64,13 @@
       <section class="status-layout" data-walking-panel hidden>
         <div class="panel chart-panel">
           <div class="chart-head">
-            <div>
+            <div class="chart-head-title">
               <h2>累計步數排名</h2>
+              <strong data-walking-frame>--</strong>
+            </div>
+            <div class="chart-head-description">
               <p>每 0.2 秒前進一天，長條依目前累計步數重新排序；可直接點擊長條查看個人資訊。</p>
             </div>
-            <strong data-walking-frame>--</strong>
           </div>
           <div class="chart-canvas walking-chart" data-walking-chart></div>
         </div>
@@ -84,20 +86,24 @@
         <div class="status-main-column">
           <div class="panel chart-panel">
             <div class="chart-head">
-              <div>
+              <div class="chart-head-title">
                 <h2>積分長條圖</h2>
+                <strong data-health-frame>--</strong>
+              </div>
+              <div class="chart-head-description">
                 <p>
                   每秒前進一個週期。實心代表排名積分，斜線代表額外積分；可直接點擊長條查看個人資訊。
                 </p>
               </div>
-              <strong data-health-frame>--</strong>
             </div>
             <div class="chart-canvas score-chart" data-health-score-chart></div>
           </div>
           <div class="panel chart-panel">
             <div class="chart-head">
-              <div>
+              <div class="chart-head-title">
                 <h2>加權百分比線圖</h2>
+              </div>
+              <div class="chart-head-description">
                 <p>只呈現每位參賽者每期身體數據加權後的百分比值，每個節點皆顯示 marker。</p>
               </div>
             </div>
@@ -109,6 +115,8 @@
           <p class="detail-hint">點擊積分長條或線圖資料點可切換資料。</p>
           <div class="participant-pills" data-health-participants></div>
           <div class="detail-card" data-health-detail></div>
+          <h3 class="detail-subtitle">三項累計變化量</h3>
+          <div class="detail-delta-chart" data-detail-delta-chart></div>
         </aside>
       </section>
     </main>
