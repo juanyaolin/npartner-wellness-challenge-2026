@@ -19,25 +19,15 @@
           <span class="logoText">N-Partner</span>
         </a>
         <div class="links">
-          <a class="ghost" href="index.html#competitions">回首頁</a>
           <a class="ghost" href="walking.html">健走賽</a>
           <a class="ghost" href="health.html">健康賽</a>
-          <a class="primary" href="status.html" data-nav-link>賽況總覽</a>
+          <a class="primary" href="index.html#competitions" data-nav-link>回首頁</a>
         </div>
         <div class="links mobileOnly">
-          <a class="primary" href="status.html">賽況</a>
+          <a class="primary" href="index.html#competitions">回首頁</a>
         </div>
       </div>
     </nav>
-
-    <header class="detail-hero wrap status-hero">
-      <div class="eyebrow">即時賽況｜三個並列賽事</div>
-      <h1>賽況總覽</h1>
-      <p>
-        賽況資料來自 Google Sheet
-        CSV。健走賽依累計步數排序；健康賽分為男子組與女子組，依每期身體數據加權結果計算排名積分，並加總額外積分。
-      </p>
-    </header>
 
     <main class="wrap status-shell" data-status-app>
       <section class="status-tabs" aria-label="選擇賽事">
@@ -68,15 +58,12 @@
               <h2>累計步數排名</h2>
               <strong data-walking-frame>--</strong>
             </div>
-            <div class="chart-head-description">
-              <p>每 0.2 秒前進一天，長條依目前累計步數重新排序；可直接點擊長條查看個人資訊。</p>
-            </div>
           </div>
           <div class="chart-canvas walking-chart" data-walking-chart></div>
         </div>
         <aside class="panel detail-panel">
           <h2>個人詳細資訊</h2>
-          <p class="detail-hint">點擊主圖上的參賽者長條可切換資料。</p>
+          <p class="detail-hint">點擊主圖上的參賽者長條可切換資料</p>
           <div class="participant-pills" data-walking-participants></div>
           <div class="detail-card" data-walking-detail></div>
         </aside>
@@ -89,11 +76,6 @@
               <div class="chart-head-title">
                 <h2>積分長條圖</h2>
                 <strong data-health-frame>--</strong>
-              </div>
-              <div class="chart-head-description">
-                <p>
-                  每秒前進一個週期。實心代表排名積分，斜線代表額外積分；可直接點擊長條查看個人資訊。
-                </p>
               </div>
             </div>
             <div class="chart-canvas score-chart" data-health-score-chart></div>

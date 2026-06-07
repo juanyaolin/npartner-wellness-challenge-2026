@@ -5,8 +5,7 @@ const STATUS_CONFIG = {
       type: "walking",
       csvUrl: "data/walking.csv",
       intervalMs: 200,
-      description:
-        "男女混合排名賽，依每日累計步數排序。CSV 提供兩週期步數，前端會攤分成每日步數推進動畫。",
+      description: "男女混合排名賽，依每周累計步數排序。",
     },
     "health-men": {
       label: "男子健康賽",
@@ -47,6 +46,15 @@ const STATUS_CONFIG = {
     "#22c55e",
     "#64748b",
     "#d946ef",
+    "#dc2626",
+    "#2563eb",
+    "#65a30d",
+    "#9333ea",
+    "#0891b2",
+    "#ca8a04",
+    "#be185d",
+    "#0f766e",
+    "#7c3aed",
   ],
 };
 
