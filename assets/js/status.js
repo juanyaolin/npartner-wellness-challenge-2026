@@ -196,7 +196,7 @@ function parseCsv(csvText) {
       header: true,
       skipEmptyLines: true,
       transformHeader: (header) => header.trim(),
-      complete: (results) => resolve(results.data),
+      complete: (results) => resolve(results.data.filter(hasAnyCsvValue)),
       error: reject,
     });
   });
@@ -209,9 +209,9 @@ function normalizeWalking(rows) {
 
   rows.forEach((row) => {
     const id = readText(row, "參賽者編號");
-    if (!id) return;
-
     const periodId = readText(row, "週期編號");
+    if (!id || !periodId) return;
+
     const participant = ensureParticipant(participantsMap, id, readText(row, "參賽者暱稱"));
     participant.periodInput.set(periodId, {
       periodId,
@@ -273,9 +273,9 @@ function normalizeHealth(rows) {
 
   rows.forEach((row) => {
     const id = readText(row, "參賽者編號");
-    if (!id) return;
-
     const periodId = readText(row, "週期編號");
+    if (!id || !periodId) return;
+
     const weightLossPercent = readNumber(row, "體重減少率");
     const bodyFatLossPercent = readNumber(row, "體脂肪減少率");
     const skeletalMuscleGainPercent = readNumber(row, "骨骼肌增加率");
@@ -386,8 +386,9 @@ function collectPeriods(rows) {
   const periodMap = new Map();
 
   rows.forEach((row) => {
+    const id = readText(row, "參賽者編號");
     const periodId = readText(row, "週期編號");
-    if (!periodId || periodMap.has(periodId)) return;
+    if (!id || !periodId || periodMap.has(periodId)) return;
     periodMap.set(periodId, {
       periodId,
       startDate: readText(row, "週期開始日期"),
@@ -912,6 +913,10 @@ function getChart(key, element) {
 function replaceChartClick(chart, handler) {
   chart.off("click");
   chart.on("click", handler);
+}
+
+function hasAnyCsvValue(row) {
+  return Object.values(row).some((value) => String(value || "").trim());
 }
 
 function readText(row, key) {
