@@ -167,3 +167,71 @@ Write-CsvFile `
   -Path (Join-Path $dataRoot "health-women.csv") `
   -Headers $healthHeaders `
   -Rows (New-HealthRows -ParticipantCount 11 -NicknamePrefix "女健" -ValueOffset 5)
+
+function Write-ScenarioCsv {
+  param(
+    [string]$SourcePath,
+    [string]$TargetPath,
+    [scriptblock]$IsInvalid
+  )
+
+  $rows = @(Import-Csv -Encoding UTF8 $SourcePath)
+  $headers = @($rows[0].PSObject.Properties.Name)
+  $outputRows = [System.Collections.Generic.List[string]]::new()
+
+  foreach ($row in $rows) {
+    $copy = [ordered]@{}
+    foreach ($header in $headers) {
+      $copy[$header] = $row.$header
+    }
+
+    if (& $IsInvalid $row) {
+      $copy["是否有效"] = "否"
+    }
+
+    $outputRows.Add((Convert-ToCsvLine @($headers | ForEach-Object { $copy[$_] })))
+  }
+
+  Write-CsvFile -Path $TargetPath -Headers $headers -Rows $outputRows
+}
+
+$scenarioRoot = Join-Path $dataRoot "scenarios"
+$scenarioNames = @("complete", "partial-missing", "participant-missing")
+foreach ($scenarioName in $scenarioNames) {
+  [System.IO.Directory]::CreateDirectory((Join-Path $scenarioRoot $scenarioName)) | Out-Null
+}
+
+$fixtureFiles = @(
+  @{ Name = "walking.csv"; LastParticipants = @(26, 27) },
+  @{ Name = "health-men.csv"; LastParticipants = @(9, 10) },
+  @{ Name = "health-women.csv"; LastParticipants = @(10, 11) }
+)
+
+foreach ($fixture in $fixtureFiles) {
+  $sourcePath = Join-Path $dataRoot $fixture.Name
+  $timeKey = if ($fixture.Name -eq "walking.csv") { "週期編號" } else { "量測編號" }
+
+  Write-ScenarioCsv `
+    -SourcePath $sourcePath `
+    -TargetPath (Join-Path (Join-Path $scenarioRoot "complete") $fixture.Name) `
+    -IsInvalid { param($row) $false }
+
+  Write-ScenarioCsv `
+    -SourcePath $sourcePath `
+    -TargetPath (Join-Path (Join-Path $scenarioRoot "partial-missing") $fixture.Name) `
+    -IsInvalid {
+      param($row)
+      $participantId = [int]$row."參賽者編號"
+      $timeId = [int]$row.$timeKey
+      return ($participantId -eq 1 -and $timeId -in @(1, 2)) -or
+        ($participantId -eq 2 -and $timeId -in @(5, 8))
+    }
+
+  Write-ScenarioCsv `
+    -SourcePath $sourcePath `
+    -TargetPath (Join-Path (Join-Path $scenarioRoot "participant-missing") $fixture.Name) `
+    -IsInvalid {
+      param($row)
+      return [int]$row."參賽者編號" -in $fixture.LastParticipants
+    }
+}

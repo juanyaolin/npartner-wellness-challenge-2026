@@ -5,6 +5,7 @@ export default [
       ecmaVersion: 2022,
       sourceType: "script",
       globals: {
+        AbortController: "readonly",
         console: "readonly",
         document: "readonly",
         echarts: "readonly",

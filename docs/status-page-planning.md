@@ -870,3 +870,33 @@ Google Sheet 的資料生命週期不是一次性匯入，而是：
 - 更新後參賽者名單增加、暱稱改變或量測期數增加。
 - 更新請求失敗時仍保留上一份成功畫面。
 - 快速切換三個賽事時，慢速舊請求不會覆蓋目前分頁。
+
+### 11.15 本次實作結果
+
+本節規劃已實作到以下檔案：
+
+- `assets/js/status.js`
+  - Google Sheet 新欄位映射與必要表頭驗證
+  - 參賽者名單、完整時間軸及截至今日可見時間軸分離
+  - `Asia/Taipei` 日期判斷
+  - 過去／今日無效資料的缺漏顯示
+  - 健康賽缺漏量測當期 0 分、不排名且折線保留缺口
+  - 未來週期／量測不渲染
+  - 完全無資料參賽者仍保留於圖表、圖例、按鈕及明細
+  - 最後一筆重複識別鍵覆蓋前筆
+  - Google Sheet 使用 `cache: "no-store"`
+  - 使用 `AbortController` 防止切換賽事時舊請求覆蓋
+  - `source=local&scenario=...` 本機情境切換
+- `scripts/generate-status-fixtures.ps1`
+  - 重建三份完整基準 CSV
+  - 產生 `complete`、`partial-missing`、`participant-missing` 共九份情境 fixture
+- `status.html`、`assets/css/styles.css`
+  - 本機資料標記、缺漏提示及無資料參賽者弱化樣式
+
+本機測試網址範例：
+
+```text
+status.html?source=local&scenario=complete&contest=walking
+status.html?source=local&scenario=partial-missing&contest=health-men
+status.html?source=local&scenario=participant-missing&contest=health-women
+```

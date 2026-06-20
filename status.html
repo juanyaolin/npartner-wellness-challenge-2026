@@ -38,7 +38,10 @@
 
       <section class="status-summary panel" aria-live="polite">
         <div>
-          <span class="badge blue" data-contest-type>資料讀取中</span>
+          <div class="status-badges">
+            <span class="badge blue" data-contest-type>資料讀取中</span>
+            <span class="badge green status-source-note" data-source-note hidden></span>
+          </div>
           <h2 data-contest-title>賽況載入中...</h2>
           <p data-contest-description>請稍候，正在載入 CSV 並整理排名資料。</p>
         </div>
@@ -50,6 +53,7 @@
       </section>
 
       <section class="status-error panel" data-status-error hidden></section>
+      <section class="status-notice panel" data-status-notice hidden></section>
 
       <section class="status-layout" data-walking-panel hidden>
         <div class="panel chart-panel">
@@ -74,7 +78,7 @@
           <div class="panel chart-panel">
             <div class="chart-head">
               <div class="chart-head-title">
-                <h2>積分長條圖</h2>
+                <h2>累計積分排名</h2>
                 <strong data-health-frame>--</strong>
               </div>
             </div>
