@@ -1833,3 +1833,244 @@ if (hasCurrentData) {
 - 第一次量測仍無效的參賽者 1 維持最後並顯示截至目前無資料。
 - `participant-missing` 完整健走賽的兩位完全無資料者穩定位於最後兩名。
 - 三項賽事頁面皆無載入錯誤。
+
+## 16. 健康賽主圖 Tooltip 與 Legend 調整規劃
+
+### 16.1 調整範圍
+
+男子健康賽與女子健康賽共用 `renderHealthScoreChart()`，因此本節調整需同時套用兩個健康賽。
+
+調整內容：
+
+- 精簡有效資料的 tooltip 狀態文字。
+- tooltip 同時顯示三種累計積分。
+- legend 改成與圖上「實心／斜線紋理」一致的樣式。
+
+### 16.2 Tooltip 狀態文字
+
+目前有效資料 tooltip 會顯示：
+
+```text
+參賽者名稱
+有效資料
+累計：XX 分
+```
+
+正常有效資料不需要額外顯示「有效資料」，後續改為：
+
+```text
+參賽者名稱
+總積分：XX 分
+排名積分：XX 分
+額外積分：XX 分
+```
+
+當期無效時仍保留狀態提示。
+
+#### 過去曾有有效資料，但本次量測無效
+
+```text
+參賽者名稱
+本次未量測／資料無效，當期 0 分
+總積分：XX 分
+排名積分：XX 分
+額外積分：XX 分
+```
+
+此處三項積分皆是截至目前的累計值，不是本次增加值。
+
+#### 截至目前全部資料皆無效
+
+```text
+參賽者名稱
+截至目前尚無有效資料
+總積分：0 分
+排名積分：0 分
+額外積分：0 分
+```
+
+規則：
+
+- `current.hasData = true`：不顯示狀態文字。
+- `current.hasData = false` 且 `current.hasValidDataToDate = true`：
+  顯示 `本次未量測／資料無效，當期 0 分`。
+- `current.hasValidDataToDate = false`：
+  顯示 `截至目前尚無有效資料`。
+- 不再使用模糊的「累計」單一欄位名稱。
+- 所有數值使用既有 `formatNumber()`，維持千分位格式。
+
+### 16.3 Tooltip 積分欄位
+
+Tooltip 讀取目前 frame 的累計欄位：
+
+```js
+participant.current.totalPoints
+participant.current.rankingPointsTotal
+participant.current.extraPointsTotal
+```
+
+顯示順序固定為：
+
+1. 總積分
+2. 排名積分
+3. 額外積分
+
+需驗證：
+
+- 總積分等於排名積分加額外積分。
+- 本次無效時三項數值沿用前一期累計。
+- 第一次量測即無效時三項皆顯示 0。
+- Tooltip 顯示結果與個人詳細資訊一致。
+
+### 16.4 現有 Legend 不一致的原因
+
+目前圖表為兩個 stacked series：
+
+- 排名積分
+- 額外積分
+
+但實際顏色是設定在每一位參賽者的 data item：
+
+```text
+排名積分：參賽者固定色的實心長條
+額外積分：同一參賽者顏色，加上白色斜線 decal
+```
+
+ECharts 原生 legend 主要依 series 樣式產生圖示：
+
+- 無法得知每個參賽者不同的 data item 顏色。
+- 原生 legend icon 不一定會呈現 data item 上的 decal。
+- 因此目前 legend 顯示成兩個固定且不同的顏色，與圖上語意不一致。
+
+### 16.5 Legend 建議方案：自訂 HTML Legend
+
+移除健康積分圖的 ECharts 原生 legend：
+
+```js
+legend: { show: false }
+```
+
+在圖表下方新增自訂 HTML legend：
+
+```html
+<div class="health-score-legend" aria-label="積分圖例">
+  <span class="health-score-legend__item">
+    <i class="health-score-legend__swatch solid"></i>
+    排名積分
+  </span>
+  <span class="health-score-legend__item">
+    <i class="health-score-legend__swatch striped"></i>
+    額外積分
+  </span>
+</div>
+```
+
+樣式語意：
+
+- 排名積分：實心色塊。
+- 額外積分：同一底色加白色／半透明斜線。
+- 兩個色塊使用相同基底色，避免誤解為兩套不同顏色資料。
+- 基底色只作為圖例示意，不代表特定參賽者。
+- 建議使用專案藍色或中性色作為示意底色。
+
+斜線紋理可用 CSS 建立：
+
+```css
+background:
+  repeating-linear-gradient(
+    135deg,
+    rgb(255 255 255 / 65%) 0 2px,
+    transparent 2px 6px
+  ),
+  var(--legend-sample-color);
+```
+
+優點：
+
+- 可忠實表達圖上的實心／紋理差異。
+- 不受 ECharts legend icon 與 decal 支援限制。
+- 桌面與手機樣式可完全控制。
+- 可加入無障礙文字，不只依賴顏色辨識。
+
+### 16.6 Legend 版面
+
+建議放在健康積分圖 canvas 正下方、同一 panel 內：
+
+```text
+累計積分排名
+[圖表]
+■ 排名積分　▧ 額外積分
+```
+
+調整圖表空間：
+
+- 移除原生 legend 後，ECharts `grid.bottom` 可由目前 42px 縮小到約 16 至 24px。
+- 自訂 legend 使用正常 HTML flow，不與 canvas 重疊。
+- 桌面版置中排列。
+- 手機版允許換行，仍保持兩個項目在同一區塊。
+- 色塊需有邊框，確保淺色背景上仍清楚可辨。
+
+### 16.7 無效資料樣式與 Legend
+
+完全無資料參賽者的長條仍使用灰色弱化，此狀態不需要加入第三個 legend 項目，原因是：
+
+- 灰色代表參賽者資料狀態，不是積分類型。
+- Tooltip 與長條上的「尚無資料」已能說明狀態。
+- 加入第三個 legend 容易把資料狀態與 stacked series 類型混在一起。
+
+若日後需要說明灰色，可改在圖表說明文字補充：
+
+```text
+灰色代表截至目前尚無有效量測資料。
+```
+
+本次先不加入。
+
+### 16.8 程式與結構調整
+
+`renderHealthScoreChart()`：
+
+- 重寫 tooltip formatter。
+- 移除 ECharts 原生 legend。
+- 調整 `grid.bottom`。
+- Tooltip 不再依 `params[0].dataIndex` 以外的 series 順序取得數值，仍由 ranked participant 的 current frame 統一提供三項累計數值。
+
+`status.html`：
+
+- 在 `[data-health-score-chart]` 後新增自訂 legend 容器。
+- Legend 為靜態語意，不需每個 frame 重建。
+
+`assets/css/styles.css`：
+
+- 新增：
+  - `.health-score-legend`
+  - `.health-score-legend__item`
+  - `.health-score-legend__swatch`
+  - `.health-score-legend__swatch.solid`
+  - `.health-score-legend__swatch.striped`
+
+### 16.9 驗收項目
+
+- 男子與女子健康賽的有效資料 tooltip 不再出現「有效資料」。
+- 當期無效但過去曾有效時，tooltip 保留無效提示。
+- 截至目前全部無效時，tooltip 顯示尚無有效資料。
+- Tooltip 同時顯示總積分、排名積分與額外積分。
+- Tooltip 三項數值與個人詳細資訊一致。
+- 總積分等於排名積分加額外積分。
+- 本次無效時積分維持前一期累計，當期不增加。
+- 原生 legend 不再顯示兩種誤導性的固定顏色。
+- 自訂 legend 的排名積分為實心、額外積分為同色斜線紋理。
+- Legend 在桌面與手機版不重疊、不被裁切。
+- 圖表點擊、tooltip、stacked bar 及動畫行為不受影響。
+
+### 16.10 預計異動檔案
+
+- `assets/js/status.js`
+  - 健康積分圖 tooltip 內容
+  - 關閉原生 legend 及調整 grid
+- `status.html`
+  - 新增自訂健康積分 legend
+- `assets/css/styles.css`
+  - 自訂 legend 的實心與斜線紋理
+- `docs/status-page-planning.md`
+  - 本節作為後續實作與驗收依據
