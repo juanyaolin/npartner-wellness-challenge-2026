@@ -15,21 +15,44 @@
         margin-bottom: 8px;
       }
 
-      .scenario-intro {
+      .scenario-intro,
+      .scenario-note {
         color: var(--muted);
+      }
+
+      .scenario-intro {
         margin-bottom: 24px;
       }
 
-      .scenario-grid {
+      .scenario-grid,
+      .scenario-periods {
         display: grid;
         gap: 18px;
+      }
+
+      .scenario-periods {
+        margin-top: 18px;
+      }
+
+      .scenario-period {
+        border-top: 1px solid #dfeaf0;
+        padding-top: 16px;
+      }
+
+      .scenario-period:first-child {
+        border-top: 0;
+        padding-top: 0;
+      }
+
+      .scenario-period h3 {
+        margin-bottom: 2px;
       }
 
       .scenario-links {
         display: flex;
         flex-wrap: wrap;
         gap: 10px;
-        margin-top: 18px;
+        margin-top: 10px;
       }
 
       .scenario-links a {
@@ -41,7 +64,8 @@
     <main class="wrap scenario-page">
       <h1>賽況頁本機假資料情境</h1>
       <p class="scenario-intro">
-        以下連結使用 <code>data/scenarios/</code> 內的 CSV，不會讀取 Google Sheet。
+        以下連結使用 <code>data/scenarios/</code> 內的 CSV，不會讀取 Google Sheet。中段與完整賽程使用
+        <code>asOf</code> 模擬日期。
       </p>
 
       <div class="scenario-grid">
@@ -49,71 +73,65 @@
           <span class="badge green">情境 1</span>
           <h2>所有參賽者都有資料</h2>
           <p>每位參賽者在每個已到達的週期或量測都有有效資料。</p>
-          <div class="scenario-links">
-            <a
-              class="primary"
-              href="status.html?source=local&amp;scenario=complete&amp;contest=walking"
-              >健走賽</a
-            >
-            <a
-              class="primary"
-              href="status.html?source=local&amp;scenario=complete&amp;contest=health-men"
-              >男子健康賽</a
-            >
-            <a
-              class="primary"
-              href="status.html?source=local&amp;scenario=complete&amp;contest=health-women"
-              >女子健康賽</a
-            >
-          </div>
+          <div data-scenario-links="complete"></div>
         </section>
 
         <section class="panel">
           <span class="badge blue">情境 2</span>
           <h2>部分週期或量測缺少資料</h2>
-          <p>少數參賽者在指定時間點沒有提供資料，其餘時間仍有有效資料。</p>
-          <div class="scenario-links">
-            <a
-              class="primary"
-              href="status.html?source=local&amp;scenario=partial-missing&amp;contest=walking"
-              >健走賽</a
-            >
-            <a
-              class="primary"
-              href="status.html?source=local&amp;scenario=partial-missing&amp;contest=health-men"
-              >男子健康賽</a
-            >
-            <a
-              class="primary"
-              href="status.html?source=local&amp;scenario=partial-missing&amp;contest=health-women"
-              >女子健康賽</a
-            >
-          </div>
+          <p>參賽者 1 缺第 1、2 期；參賽者 2 缺第 5、8 期，可用中段與完整賽程觀察缺口。</p>
+          <div data-scenario-links="partial-missing"></div>
         </section>
 
         <section class="panel">
           <span class="badge orange">情境 3</span>
           <h2>少數參賽者完全沒有資料</h2>
           <p>兩位參賽者所有紀錄皆無效，但仍會保留在圖表、名單與個人明細。</p>
-          <div class="scenario-links">
-            <a
-              class="primary"
-              href="status.html?source=local&amp;scenario=participant-missing&amp;contest=walking"
-              >健走賽</a
-            >
-            <a
-              class="primary"
-              href="status.html?source=local&amp;scenario=participant-missing&amp;contest=health-men"
-              >男子健康賽</a
-            >
-            <a
-              class="primary"
-              href="status.html?source=local&amp;scenario=participant-missing&amp;contest=health-women"
-              >女子健康賽</a
-            >
-          </div>
+          <div data-scenario-links="participant-missing"></div>
         </section>
       </div>
     </main>
+
+    <script>
+      const periods = [
+        { label: "實際今日", description: "使用目前台北日期", asOf: "" },
+        { label: "賽程中段", description: "模擬日期 2026/08/31", asOf: "2026-08-31" },
+        { label: "完整賽程", description: "顯示全部週期／量測", asOf: "final" },
+      ];
+      const contests = [
+        { key: "walking", label: "健走賽", finalDate: "2026-10-11" },
+        { key: "health-men", label: "男子健康賽", finalDate: "2026-10-12" },
+        { key: "health-women", label: "女子健康賽", finalDate: "2026-10-12" },
+      ];
+
+      document.querySelectorAll("[data-scenario-links]").forEach((container) => {
+        const scenario = container.dataset.scenarioLinks;
+        container.className = "scenario-periods";
+        container.innerHTML = periods
+          .map(
+            (period) => `
+              <section class="scenario-period">
+                <h3>${period.label}</h3>
+                <p class="scenario-note">${period.description}</p>
+                <div class="scenario-links">
+                  ${contests
+                    .map((contest) => {
+                      const asOf = period.asOf === "final" ? contest.finalDate : period.asOf;
+                      const query = new URLSearchParams({
+                        source: "local",
+                        scenario,
+                        contest: contest.key,
+                      });
+                      if (asOf) query.set("asOf", asOf);
+                      return `<a class="primary" href="status.html?${query}">${contest.label}</a>`;
+                    })
+                    .join("")}
+                </div>
+              </section>
+            `,
+          )
+          .join("");
+      });
+    </script>
   </body>
 </html>
