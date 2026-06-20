@@ -673,9 +673,16 @@ function isEffectiveRow(row) {
 
 現有三份本機 CSV 保留為開發期間的基準範本：
 
-- `data/walking.csv`：18 位參賽者、9 個週期
-- `data/health-men.csv`：12 位參賽者、9 次量測
-- `data/health-women.csv`：11 位參賽者、9 次量測
+- `data/walking.csv`：27 位參賽者、18 個週期
+- `data/health-men.csv`：10 位參賽者、10 次量測
+- `data/health-women.csv`：11 位參賽者、10 次量測
+
+週期與量測次數不在本機自行假設，應以 Google Sheet 當下定義為準。2026-06-20 同步結果：
+
+- 健走賽：18 週，2026/06/08 至 2026/10/11。
+- 男子／女子健康賽：10 次量測，2026/06/08 至 2026/10/12。
+- Google Sheet 中無週期／量測編號的空白預備列不納入本機 fixture。
+- 若未來 Sheet 增減時間點，重新產生本機 fixture 前應先同步產生腳本中的時間軸。
 
 後續執行時應先將三份基準範本同步成 Google Sheet 的新表頭：
 
@@ -683,6 +690,7 @@ function isEffectiveRow(row) {
 - 健康賽加入「是否有效」，將週期欄位改為「量測日期／量測編號」，移除週期起訖日期。
 - 基準範本預設設計成所有紀錄皆有效，可作為完整資料來源及衍生 fixture 的單一基準。
 - 本機 CSV 是測試資料，不回寫 Google Sheet，也不改變正式環境預設資料來源。
+- `scripts/generate-status-fixtures.ps1` 用於依固定公式重建三份基準資料，確保人數、時間點及累計數值可重現。
 
 為了真正測試整份資料集的不同狀態，不應只在同一份 CSV 中各安排一位完整、部分缺漏及完全缺漏的參賽者。建議由三份基準範本衍生以下目錄：
 
