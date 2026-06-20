@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/x-icon" href="favicon.ico" />
+    <title>賽況頁本機假資料情境</title>
+    <link rel="stylesheet" href="assets/css/styles.css" />
+    <style>
+      .scenario-page {
+        padding-block: 36px 64px;
+      }
+
+      .scenario-page h1 {
+        margin-bottom: 8px;
+      }
+
+      .scenario-intro {
+        color: var(--muted);
+        margin-bottom: 24px;
+      }
+
+      .scenario-grid {
+        display: grid;
+        gap: 18px;
+      }
+
+      .scenario-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 18px;
+      }
+
+      .scenario-links a {
+        text-decoration: none;
+      }
+    </style>
+  </head>
+  <body class="status-page">
+    <main class="wrap scenario-page">
+      <h1>賽況頁本機假資料情境</h1>
+      <p class="scenario-intro">
+        以下連結使用 <code>data/scenarios/</code> 內的 CSV，不會讀取 Google Sheet。
+      </p>
+
+      <div class="scenario-grid">
+        <section class="panel">
+          <span class="badge green">情境 1</span>
+          <h2>所有參賽者都有資料</h2>
+          <p>每位參賽者在每個已到達的週期或量測都有有效資料。</p>
+          <div class="scenario-links">
+            <a
+              class="primary"
+              href="status.html?source=local&amp;scenario=complete&amp;contest=walking"
+              >健走賽</a
+            >
+            <a
+              class="primary"
+              href="status.html?source=local&amp;scenario=complete&amp;contest=health-men"
+              >男子健康賽</a
+            >
+            <a
+              class="primary"
+              href="status.html?source=local&amp;scenario=complete&amp;contest=health-women"
+              >女子健康賽</a
+            >
+          </div>
+        </section>
+
+        <section class="panel">
+          <span class="badge blue">情境 2</span>
+          <h2>部分週期或量測缺少資料</h2>
+          <p>少數參賽者在指定時間點沒有提供資料，其餘時間仍有有效資料。</p>
+          <div class="scenario-links">
+            <a
+              class="primary"
+              href="status.html?source=local&amp;scenario=partial-missing&amp;contest=walking"
+              >健走賽</a
+            >
+            <a
+              class="primary"
+              href="status.html?source=local&amp;scenario=partial-missing&amp;contest=health-men"
+              >男子健康賽</a
+            >
+            <a
+              class="primary"
+              href="status.html?source=local&amp;scenario=partial-missing&amp;contest=health-women"
+              >女子健康賽</a
+            >
+          </div>
+        </section>
+
+        <section class="panel">
+          <span class="badge orange">情境 3</span>
+          <h2>少數參賽者完全沒有資料</h2>
+          <p>兩位參賽者所有紀錄皆無效，但仍會保留在圖表、名單與個人明細。</p>
+          <div class="scenario-links">
+            <a
+              class="primary"
+              href="status.html?source=local&amp;scenario=participant-missing&amp;contest=walking"
+              >健走賽</a
+            >
+            <a
+              class="primary"
+              href="status.html?source=local&amp;scenario=participant-missing&amp;contest=health-men"
+              >男子健康賽</a
+            >
+            <a
+              class="primary"
+              href="status.html?source=local&amp;scenario=participant-missing&amp;contest=health-women"
+              >女子健康賽</a
+            >
+          </div>
+        </section>
+      </div>
+    </main>
+  </body>
+</html>
