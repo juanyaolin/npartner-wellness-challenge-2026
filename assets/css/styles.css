@@ -1272,6 +1272,11 @@ body.status-page {
   font-weight: 800;
 }
 
+.detail-heading .detail-status {
+  color: #b85c38;
+  margin-top: 3px;
+}
+
 .metric-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);

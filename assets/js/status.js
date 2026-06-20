@@ -32,6 +32,8 @@ const STATUS_CONFIG = {
   walkingAnimation: {
     framesPerDay: 10,
     seedVersion: "walking-v1",
+    chartUpdateEveryTicks: 4,
+    chartTransitionMs: 110,
   },
   requiredHeaders: {
     walking: [
@@ -102,6 +104,8 @@ const state = {
   timer: null,
   selectedParticipantId: null,
   currentFrame: 0,
+  walkingChartFrame: -1,
+  walkingChartSignature: "",
   requestId: 0,
   abortController: null,
   charts: {
@@ -194,6 +198,8 @@ async function setActiveContest(contestKey) {
   state.activeContest = contestKey;
   state.selectedParticipantId = null;
   state.currentFrame = 0;
+  state.walkingChartFrame = -1;
+  state.walkingChartSignature = "";
   updateUrlContest(contestKey);
   updateTabState(contestKey);
   setLoading(contest);
@@ -866,7 +872,10 @@ function renderWalking(data, frame) {
   els.walkingFrame.textContent = `第 ${day.daySequence} 天 / ${data.visibleDays.length} 天`;
   updateParticipantButtons(els.walkingParticipants, data.participants, "walking");
   els.walkingDetail.innerHTML = renderWalkingDetail(data, ranked, frame);
-  renderWalkingChart(ranked, frame);
+  if (shouldUpdateWalkingChart(day, frame, data.visibleFrames.length)) {
+    renderWalkingChart(data, ranked, frame);
+    state.walkingChartFrame = frame;
+  }
 
   if (!ranked.some((participant) => participant.current.hasData)) {
     showNotice("本日所屬週期目前無人提供有效資料，所有參賽者均顯示為未排名。");
@@ -887,13 +896,26 @@ function getWalkingRanked(data, frame) {
     );
 }
 
-function renderWalkingChart(ranked, frame) {
+function shouldUpdateWalkingChart(frameData, frame, frameCount) {
+  const everyTicks = STATUS_CONFIG.walkingAnimation.chartUpdateEveryTicks;
+  return (
+    state.walkingChartFrame < 0 ||
+    (frame + 1) % everyTicks === 0 ||
+    frameData.tickIndex === frameData.ticksPerDay ||
+    frame === frameCount - 1
+  );
+}
+
+function renderWalkingChart(data, ranked, frame) {
   const chart = getChart("walking", els.walkingChart);
   els.walkingChart.dataset.rankOrder = ranked.map((participant) => participant.id).join(",");
+  els.walkingChart.dataset.chartFrame = String(frame);
   const labels = ranked.map((participant) => participant.nickname);
   const values = ranked.map((participant) => ({
     value: participant.current.cumulativeSteps,
     id: participant.id,
+    name: participant.nickname,
+    hasData: participant.current.hasData,
     itemStyle: {
       color: participant.current.hasData ? participant.color : "#cbd5dc",
       opacity: participant.current.hasData ? 1 : 0.65,
@@ -907,65 +929,106 @@ function renderWalkingChart(ranked, frame) {
           }
         : undefined,
   }));
+  const participantSignature = data.participants
+    .map((participant) => `${participant.id}:${participant.nickname}`)
+    .join(",");
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const transitionMs = reducedMotion ? 0 : STATUS_CONFIG.walkingAnimation.chartTransitionMs;
+  const needsFullOption = state.walkingChartSignature !== participantSignature;
 
-  chart.setOption(
-    {
-      animation: false,
-      animationDuration: 0,
-      animationDurationUpdate: 0,
-      grid: { top: 12, right: 12, bottom: 18, left: 12 },
-      tooltip: {
-        trigger: "item",
-        formatter: (params) => {
-          const participant = ranked[params.dataIndex];
-          const status = participant.current.hasData ? "" : "<br/>本週未提供資料";
-          return `${escapeHtml(params.name)}<br/>累計：${formatNumber(params.value)} 步${status}`;
-        },
-      },
-      xAxis: {
-        type: "value",
-        axisLabel: { show: false },
-        axisLine: { show: false },
-        axisTick: { show: false },
-        splitLine: { show: false },
-      },
-      yAxis: {
-        type: "category",
-        inverse: true,
-        data: labels,
-        axisLabel: { show: false },
-        axisLine: { show: false },
-        axisTick: { show: false },
-      },
-      series: [
-        {
-          type: "bar",
-          data: values,
-          realtimeSort: true,
-          barMaxWidth: 30,
-          label: {
-            show: true,
-            position: "insideLeft",
-            formatter: (params) => {
-              const participant = ranked[params.dataIndex];
-              const suffix = participant.current.hasData ? `${formatCompactNumber(params.value)} 步` : "未提供";
-              return `${participant.nickname}｜${suffix}`;
-            },
-            color: "white",
-            fontWeight: 900,
-            padding: [0, 0, 0, 8],
-            textShadowBlur: 4,
-            textShadowColor: "rgba(0,0,0,0.35)",
+  if (needsFullOption) {
+    chart.setOption(
+      {
+        animation: !reducedMotion,
+        animationDuration: 0,
+        animationDurationUpdate: transitionMs,
+        animationEasingUpdate: "cubicOut",
+        grid: { top: 12, right: 12, bottom: 18, left: 12 },
+        tooltip: {
+          trigger: "item",
+          formatter: (params) => {
+            const status = params.data.hasData ? "" : "<br/>本週未提供資料";
+            return `${escapeHtml(params.name)}<br/>累計：${formatNumber(params.value)} 步${status}`;
           },
         },
-      ],
-    },
-    true,
-  );
+        xAxis: {
+          type: "value",
+          axisLabel: { show: false },
+          axisLine: { show: false },
+          axisTick: { show: false },
+          splitLine: { show: false },
+        },
+        yAxis: {
+          type: "category",
+          inverse: true,
+          data: labels,
+          animationDurationUpdate: transitionMs,
+          axisLabel: { show: false },
+          axisLine: { show: false },
+          axisTick: { show: false },
+        },
+        series: [
+          {
+            id: "walking-ranking-series",
+            type: "bar",
+            data: values,
+            realtimeSort: false,
+            universalTransition: true,
+            barMaxWidth: 30,
+            label: {
+              show: true,
+              position: "insideLeft",
+              formatter: (params) => {
+                const suffix = params.data.hasData
+                  ? `${formatCompactNumber(params.value)} 步`
+                  : "未提供";
+                return `${params.name}｜${suffix}`;
+              },
+              color: "white",
+              fontWeight: 900,
+              padding: [0, 0, 0, 8],
+              textShadowBlur: 4,
+              textShadowColor: "rgba(0,0,0,0.35)",
+            },
+          },
+        ],
+      },
+      { notMerge: true, lazyUpdate: false },
+    );
+    state.walkingChartSignature = participantSignature;
+  } else {
+    chart.setOption(
+      {
+        animation: !reducedMotion,
+        animationDurationUpdate: transitionMs,
+        animationEasingUpdate: "cubicOut",
+        yAxis: {
+          data: labels,
+          animationDurationUpdate: transitionMs,
+        },
+        series: [
+          {
+            id: "walking-ranking-series",
+            data: values,
+            universalTransition: true,
+          },
+        ],
+      },
+      { notMerge: false, lazyUpdate: false },
+    );
+  }
 
   replaceChartClick(chart, (params) => {
     state.selectedParticipantId = params.data.id;
-    renderWalking(getCachedActiveData(), frame);
+    const currentData = getCachedActiveData();
+    if (!currentData) return;
+    const currentRanked = getWalkingRanked(currentData, state.currentFrame);
+    updateParticipantButtons(els.walkingParticipants, currentData.participants, "walking");
+    els.walkingDetail.innerHTML = renderWalkingDetail(
+      currentData,
+      currentRanked,
+      state.currentFrame,
+    );
   });
 }
 
@@ -980,14 +1043,6 @@ function renderWalkingDetail(data, ranked, frame) {
   const rank = rankIndex >= 0 ? rankIndex + 1 : null;
   const previous = rankIndex > 0 ? rankedWithData[rankIndex - 1] : null;
   const next = rankIndex >= 0 ? rankedWithData[rankIndex + 1] : null;
-  const availableFrames = participant.tickFrames
-    .slice(0, frame + 1)
-    .filter((item) => item.hasData);
-  const dailyTotals = new Map();
-  availableFrames.forEach((item) => {
-    dailyTotals.set(item.date, Math.max(dailyTotals.get(item.date) || 0, item.dayStepsToDate));
-  });
-  const bestDaySteps = Math.max(0, ...dailyTotals.values());
   const status = !participant.hasAnyData
     ? "尚無任何有效資料"
     : current.hasData
@@ -997,12 +1052,8 @@ function renderWalkingDetail(data, ranked, frame) {
   return `
     ${renderDetailHeading(participant, rank ? `目前第 ${rank} 名｜${current.date}` : `未排名｜${current.date}`, status)}
     <div class="metric-grid">
-      ${renderMetric("資料狀態", status)}
       ${renderMetric("累計步數", `${formatNumber(current.cumulativeSteps)} 步`)}
-      ${renderMetric("今日步數", current.hasData ? `${formatNumber(current.dayStepsToDate)} 步` : "--")}
-      ${renderMetric("本週期累計", current.hasData ? `${formatNumber(current.periodStepsToDate)} 步` : "--")}
       ${renderMetric("本週期總步數", current.hasData ? `${formatNumber(current.periodSteps)} 步` : "--")}
-      ${renderMetric("最高單日", bestDaySteps ? `${formatNumber(bestDaySteps)} 步` : "--")}
       ${renderMetric("與前一名差距", previous ? `${formatNumber(previous.current.cumulativeSteps - current.cumulativeSteps)} 步` : "--")}
       ${renderMetric("與下一名差距", next ? `${formatNumber(current.cumulativeSteps - next.current.cumulativeSteps)} 步` : "--")}
     </div>
@@ -1225,7 +1276,6 @@ function renderHealthDetail(data, ranked, frame) {
   return `
     ${renderDetailHeading(participant, rank ? `目前第 ${rank} 名｜${current.measurementDate}` : `未排名｜${current.measurementDate}`, status)}
     <div class="metric-grid">
-      ${renderMetric("資料狀態", status)}
       ${renderMetric("總積分", `${formatNumber(current.totalPoints)} 分`)}
       ${renderMetric("排名積分", `${formatNumber(current.rankingPointsTotal)} 分`)}
       ${renderMetric("額外積分", `${formatNumber(current.extraPointsTotal)} 分`)}
@@ -1372,12 +1422,17 @@ function getCachedActiveData() {
 
 function renderDetailHeading(participant, subtitle, status) {
   const missingClass = status === "有效資料" ? "" : " missing";
+  const statusText =
+    status === "有效資料"
+      ? ""
+      : `<small class="detail-status">${escapeHtml(status)}</small>`;
   return `
     <div class="detail-heading${missingClass}" style="--participant-color: ${participant.color}">
       <span></span>
       <div>
         <strong>${escapeHtml(participant.nickname)}</strong>
         <small>${escapeHtml(subtitle)}</small>
+        ${statusText}
       </div>
     </div>
   `;
