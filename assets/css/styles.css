@@ -1142,6 +1142,45 @@ body.status-page {
   min-height: 460px;
 }
 
+.health-score-legend {
+  --legend-sample-color: #168bd7;
+
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 22px;
+  align-items: center;
+  justify-content: center;
+  color: #466070;
+  font-size: 14px;
+  font-weight: 900;
+  margin-top: 8px;
+}
+
+.health-score-legend__item {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.health-score-legend__swatch {
+  display: inline-block;
+  width: 28px;
+  height: 14px;
+  border: 1px solid rgb(16 100 157 / 28%);
+  border-radius: 4px;
+  background: var(--legend-sample-color);
+}
+
+.health-score-legend__swatch.striped {
+  background:
+    repeating-linear-gradient(
+      135deg,
+      rgb(255 255 255 / 65%) 0 2px,
+      transparent 2px 6px
+    ),
+    var(--legend-sample-color);
+}
+
 .walking-chart {
   min-height: 520px;
 }

@@ -1153,7 +1153,7 @@ function renderHealthScoreChart(ranked, frame) {
     {
       animationDuration: 350,
       animationDurationUpdate: 650,
-      grid: { top: 12, right: 12, bottom: 42, left: 12 },
+      grid: { top: 12, right: 12, bottom: 18, left: 12 },
       tooltip: {
         trigger: "axis",
         axisPointer: { type: "shadow" },
@@ -1161,14 +1161,20 @@ function renderHealthScoreChart(ranked, frame) {
           const participant = ranked[params[0]?.dataIndex];
           if (!participant) return "";
           const status = participant.current.hasData
-            ? "有效資料"
+            ? ""
             : participant.current.hasValidDataToDate
-              ? "本次未量測，當期 0 分"
-              : "截至目前尚無有效資料";
-          return `${escapeHtml(participant.nickname)}<br/>${status}<br/>累計：${formatNumber(participant.current.totalPoints)} 分`;
+              ? "本次未量測／資料無效，當期 0 分"
+              : "截至目前資料皆無效";
+          const statusLine = status ? `${escapeHtml(status)}<br/>` : "";
+          return [
+            escapeHtml(participant.nickname),
+            `${statusLine}總積分：${formatNumber(participant.current.totalPoints)} 分`,
+            `排名積分：${formatNumber(participant.current.rankingPointsTotal)} 分`,
+            `額外積分：${formatNumber(participant.current.extraPointsTotal)} 分`,
+          ].join("<br/>");
         },
       },
-      legend: { bottom: 0, data: ["排名積分", "額外積分"] },
+      legend: { show: false },
       xAxis: {
         type: "value",
         axisLabel: { show: false },
