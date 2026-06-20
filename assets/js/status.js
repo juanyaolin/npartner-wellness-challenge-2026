@@ -345,6 +345,7 @@ function normalizeWalking(rows, today) {
 
   const participants = roster.map((person, index) => {
     let cumulativeSteps = 0;
+    let hasValidDataToDate = false;
     const periodMap = new Map();
     const hasAnyData = knownTimeline.some((period) => {
       const row = records.get(makeRecordKey(person.id, period.periodId));
@@ -356,6 +357,7 @@ function normalizeWalking(rows, today) {
       const parsedSteps = readFiniteNumber(row, "周步數");
       const hasData = Boolean(row && isEffectiveRow(row) && parsedSteps !== null);
       const steps = hasData ? parsedSteps : 0;
+      if (hasData) hasValidDataToDate = true;
       const periodDays = expandVisiblePeriodDays(period, today);
       const allPeriodDays = expandAllPeriodDays(period);
       const allTicks = expandDaysToTicks(allPeriodDays);
@@ -387,6 +389,7 @@ function normalizeWalking(rows, today) {
           periodStepsToDate: cumulativeSteps - periodStartCumulative,
           cumulativeSteps,
           hasData,
+          hasValidDataToDate,
         };
       });
 
@@ -394,6 +397,7 @@ function normalizeWalking(rows, today) {
         ...period,
         steps,
         hasData,
+        hasValidDataToDate,
         periodStartCumulative,
         cumulativeSteps,
         tickFrames,
@@ -469,6 +473,8 @@ function normalizeHealth(rows, today) {
   const participants = roster.map((person, index) => {
     let rankingPointsTotal = 0;
     let extraPointsTotal = 0;
+    let hasValidDataToDate = false;
+    let latestValidWeightedPercent = null;
     const hasAnyData = knownTimeline.some((measurement) => {
       const row = records.get(makeRecordKey(person.id, measurement.measurementId));
       return isEffectiveRow(row) && Boolean(readHealthMetrics(row));
@@ -482,12 +488,17 @@ function normalizeHealth(rows, today) {
       const extraPoints = hasData ? readFiniteNumber(row, "額外積分") || 0 : 0;
       const rankingPoints = hasData ? ranking?.rankingPoints || 0 : 0;
 
+      if (hasData) {
+        hasValidDataToDate = true;
+        latestValidWeightedPercent = calculateWeightedPercent(metrics);
+      }
       rankingPointsTotal += rankingPoints;
       extraPointsTotal += extraPoints;
 
       return {
         ...measurement,
         hasData,
+        hasValidDataToDate,
         weightLossPercent: hasData ? metrics.weightLossPercent : null,
         bodyFatLossPercent: hasData ? metrics.bodyFatLossPercent : null,
         skeletalMuscleGainPercent: hasData ? metrics.skeletalMuscleGainPercent : null,
@@ -497,6 +508,7 @@ function normalizeHealth(rows, today) {
           ? metrics.cumulativeSkeletalMuscleGainPercent
           : null,
         weightedPercent: hasData ? calculateWeightedPercent(metrics) : null,
+        latestValidWeightedPercent,
         rankingPoints,
         extraPoints,
         rankingPointsTotal,
@@ -870,7 +882,14 @@ function renderWalking(data, frame) {
   els.walkingPanel.hidden = false;
   els.healthPanel.hidden = true;
   els.walkingFrame.textContent = `第 ${day.daySequence} 天 / ${data.visibleDays.length} 天`;
-  updateParticipantButtons(els.walkingParticipants, data.participants, "walking");
+  updateParticipantButtons(
+    els.walkingParticipants,
+    data.participants.map((participant) => ({
+      ...participant,
+      hasValidDataToDate: participant.tickFrames[frame].hasValidDataToDate,
+    })),
+    "walking",
+  );
   els.walkingDetail.innerHTML = renderWalkingDetail(data, ranked, frame);
   if (shouldUpdateWalkingChart(day, frame, data.visibleFrames.length)) {
     renderWalkingChart(data, ranked, frame);
@@ -878,7 +897,7 @@ function renderWalking(data, frame) {
   }
 
   if (!ranked.some((participant) => participant.current.hasData)) {
-    showNotice("本日所屬週期目前無人提供有效資料，所有參賽者均顯示為未排名。");
+    showNotice("本日所屬週期目前無人提供有效資料，已有成績者仍依累計步數排名。");
   }
 }
 
@@ -890,7 +909,8 @@ function getWalkingRanked(data, frame) {
     }))
     .sort(
       (a, b) =>
-        Number(b.current.hasData) - Number(a.current.hasData) ||
+        Number(b.current.hasValidDataToDate) -
+          Number(a.current.hasValidDataToDate) ||
         b.current.cumulativeSteps - a.current.cumulativeSteps ||
         naturalOrder(a.id, b.id),
     );
@@ -916,15 +936,18 @@ function renderWalkingChart(data, ranked, frame) {
     id: participant.id,
     name: participant.nickname,
     hasData: participant.current.hasData,
+    hasValidDataToDate: participant.current.hasValidDataToDate,
     itemStyle: {
-      color: participant.current.hasData ? participant.color : "#cbd5dc",
-      opacity: participant.current.hasData ? 1 : 0.65,
+      color: participant.current.hasValidDataToDate ? participant.color : "#cbd5dc",
+      opacity: participant.current.hasValidDataToDate ? 1 : 0.65,
     },
     label:
       participant.current.cumulativeSteps === 0
         ? {
             position: "right",
-            color: participant.current.hasData ? participant.color : "#78909d",
+            color: participant.current.hasValidDataToDate
+              ? participant.color
+              : "#78909d",
             textShadowBlur: 0,
           }
         : undefined,
@@ -947,7 +970,11 @@ function renderWalkingChart(data, ranked, frame) {
         tooltip: {
           trigger: "item",
           formatter: (params) => {
-            const status = params.data.hasData ? "" : "<br/>本週未提供資料";
+            const status = params.data.hasData
+              ? ""
+              : params.data.hasValidDataToDate
+                ? "<br/>本週未提供資料，排名沿用累計步數"
+                : "<br/>截至目前尚無有效資料";
             return `${escapeHtml(params.name)}<br/>累計：${formatNumber(params.value)} 步${status}`;
           },
         },
@@ -979,9 +1006,9 @@ function renderWalkingChart(data, ranked, frame) {
               show: true,
               position: "insideLeft",
               formatter: (params) => {
-                const suffix = params.data.hasData
+                const suffix = params.data.hasValidDataToDate
                   ? `${formatCompactNumber(params.value)} 步`
-                  : "未提供";
+                  : "尚無資料";
                 return `${params.name}｜${suffix}`;
               },
               color: "white",
@@ -1023,7 +1050,15 @@ function renderWalkingChart(data, ranked, frame) {
     const currentData = getCachedActiveData();
     if (!currentData) return;
     const currentRanked = getWalkingRanked(currentData, state.currentFrame);
-    updateParticipantButtons(els.walkingParticipants, currentData.participants, "walking");
+    updateParticipantButtons(
+      els.walkingParticipants,
+      currentData.participants.map((participant) => ({
+        ...participant,
+        hasValidDataToDate:
+          participant.tickFrames[state.currentFrame].hasValidDataToDate,
+      })),
+      "walking",
+    );
     els.walkingDetail.innerHTML = renderWalkingDetail(
       currentData,
       currentRanked,
@@ -1038,16 +1073,16 @@ function renderWalkingDetail(data, ranked, frame) {
   if (!participant) return "<p>尚無參賽者資料。</p>";
 
   const current = participant.tickFrames[frame];
-  const rankedWithData = ranked.filter((item) => item.current.hasData);
+  const rankedWithData = ranked.filter((item) => item.current.hasValidDataToDate);
   const rankIndex = rankedWithData.findIndex((item) => item.id === participant.id);
   const rank = rankIndex >= 0 ? rankIndex + 1 : null;
   const previous = rankIndex > 0 ? rankedWithData[rankIndex - 1] : null;
   const next = rankIndex >= 0 ? rankedWithData[rankIndex + 1] : null;
-  const status = !participant.hasAnyData
-    ? "尚無任何有效資料"
+  const status = !current.hasValidDataToDate
+    ? "截至目前尚無任何有效資料"
     : current.hasData
       ? "有效資料"
-      : "本週未提供資料";
+      : "本週未提供資料，排名沿用累計步數";
 
   return `
     ${renderDetailHeading(participant, rank ? `目前第 ${rank} 名｜${current.date}` : `未排名｜${current.date}`, status)}
@@ -1072,14 +1107,21 @@ function renderHealth(data, frame) {
   els.walkingPanel.hidden = true;
   els.healthPanel.hidden = false;
   els.healthFrame.textContent = `量測 ${frame + 1} / ${data.visibleFrames.length}`;
-  updateParticipantButtons(els.healthParticipants, data.participants, "health");
+  updateParticipantButtons(
+    els.healthParticipants,
+    data.participants.map((participant) => ({
+      ...participant,
+      hasValidDataToDate: participant.measurements[frame].hasValidDataToDate,
+    })),
+    "health",
+  );
   els.healthDetail.innerHTML = renderHealthDetail(data, ranked, frame);
   renderHealthScoreChart(ranked, frame);
   renderHealthWeightedChart(data, frame);
   renderDetailDeltaChart(data, frame);
 
   if (!ranked.some((participant) => participant.current.hasData)) {
-    showNotice("本次量測無人提供有效資料，所有參賽者當期積分均為 0 分。");
+    showNotice("本次量測無人提供有效資料，當期均為 0 分，已有成績者仍依累計積分排名。");
   }
 }
 
@@ -1091,15 +1133,20 @@ function getHealthRanked(data, frame) {
     }))
     .sort(
       (a, b) =>
-        Number(b.current.hasData) - Number(a.current.hasData) ||
+        Number(b.current.hasValidDataToDate) -
+          Number(a.current.hasValidDataToDate) ||
         b.current.totalPoints - a.current.totalPoints ||
-        (b.current.weightedPercent ?? -Infinity) - (a.current.weightedPercent ?? -Infinity) ||
+        (b.current.latestValidWeightedPercent ?? -Infinity) -
+          (a.current.latestValidWeightedPercent ?? -Infinity) ||
         naturalOrder(a.id, b.id),
     );
 }
 
 function renderHealthScoreChart(ranked, frame) {
   const chart = getChart("healthScore", els.healthScoreChart);
+  els.healthScoreChart.dataset.rankOrder = ranked
+    .map((participant) => participant.id)
+    .join(",");
   const labels = ranked.map((participant) => participant.nickname);
 
   chart.setOption(
@@ -1113,7 +1160,11 @@ function renderHealthScoreChart(ranked, frame) {
         formatter: (params) => {
           const participant = ranked[params[0]?.dataIndex];
           if (!participant) return "";
-          const status = participant.current.hasData ? "有效資料" : "未量測／未提供資料";
+          const status = participant.current.hasData
+            ? "有效資料"
+            : participant.current.hasValidDataToDate
+              ? "本次未量測，當期 0 分"
+              : "截至目前尚無有效資料";
           return `${escapeHtml(participant.nickname)}<br/>${status}<br/>累計：${formatNumber(participant.current.totalPoints)} 分`;
         },
       },
@@ -1142,10 +1193,12 @@ function renderHealthScoreChart(ranked, frame) {
             value: participant.current.rankingPointsTotal,
             id: participant.id,
             itemStyle: {
-              color: participant.current.hasData ? participant.color : "#cbd5dc",
-              opacity: participant.current.hasData ? 1 : 0.65,
+              color: participant.current.hasValidDataToDate
+                ? participant.color
+                : "#cbd5dc",
+              opacity: participant.current.hasValidDataToDate ? 1 : 0.65,
             },
-            label: participant.current.hasData
+            label: participant.current.hasValidDataToDate
               ? undefined
               : {
                   position: "right",
@@ -1159,9 +1212,9 @@ function renderHealthScoreChart(ranked, frame) {
             position: "insideLeft",
             formatter: (params) => {
               const participant = ranked[params.dataIndex];
-              const suffix = participant.current.hasData
+              const suffix = participant.current.hasValidDataToDate
                 ? `${formatNumber(participant.current.totalPoints)} 分`
-                : "當期 0 分";
+                : "尚無資料";
               return `${participant.nickname}｜${suffix}`;
             },
             color: "white",
@@ -1180,9 +1233,11 @@ function renderHealthScoreChart(ranked, frame) {
             value: participant.current.extraPointsTotal,
             id: participant.id,
             itemStyle: {
-              color: participant.current.hasData ? participant.color : "#cbd5dc",
-              opacity: participant.current.hasData ? 1 : 0.65,
-              decal: participant.current.hasData
+              color: participant.current.hasValidDataToDate
+                ? participant.color
+                : "#cbd5dc",
+              opacity: participant.current.hasValidDataToDate ? 1 : 0.65,
+              decal: participant.current.hasValidDataToDate
                 ? {
                     symbol: "rect",
                     dashArrayX: [2, 2],
@@ -1264,14 +1319,14 @@ function renderHealthDetail(data, ranked, frame) {
   if (!participant) return "<p>尚無參賽者資料。</p>";
 
   const current = participant.measurements[frame];
-  const rankedWithData = ranked.filter((item) => item.current.hasData);
+  const rankedWithData = ranked.filter((item) => item.current.hasValidDataToDate);
   const rankIndex = rankedWithData.findIndex((item) => item.id === participant.id);
   const rank = rankIndex >= 0 ? rankIndex + 1 : null;
-  const status = !participant.hasAnyData
-    ? "尚無任何有效資料"
+  const status = !current.hasValidDataToDate
+    ? "截至目前尚無任何有效資料"
     : current.hasData
       ? "有效資料"
-      : "未量測／未提供資料，當期 0 分";
+      : "本次未量測，當期 0 分";
 
   return `
     ${renderDetailHeading(participant, rank ? `目前第 ${rank} 名｜${current.measurementDate}` : `未排名｜${current.measurementDate}`, status)}
@@ -1381,15 +1436,18 @@ function renderParticipantButtons(participants, group) {
   return participants
     .map((participant) => {
       const active = participant.id === state.selectedParticipantId ? " active" : "";
-      const missing = participant.hasAnyData ? "" : " no-data";
-      return `<button class="participant-pill${active}${missing}" type="button" data-participant-id="${escapeAttribute(participant.id)}" data-group="${group}" style="--participant-color: ${participant.color}" title="${participant.hasAnyData ? "" : "尚無任何有效資料"}">${escapeHtml(participant.nickname)}</button>`;
+      const missing = participant.hasValidDataToDate ? "" : " no-data";
+      return `<button class="participant-pill${active}${missing}" type="button" data-participant-id="${escapeAttribute(participant.id)}" data-group="${group}" style="--participant-color: ${participant.color}" title="${participant.hasValidDataToDate ? "" : "截至目前尚無任何有效資料"}">${escapeHtml(participant.nickname)}</button>`;
     })
     .join("");
 }
 
 function updateParticipantButtons(container, participants, group) {
   const signature = participants
-    .map((participant) => `${participant.id}:${participant.nickname}:${participant.hasAnyData}`)
+    .map(
+      (participant) =>
+        `${participant.id}:${participant.nickname}:${participant.hasValidDataToDate}`,
+    )
     .join(",");
   if (container.dataset.participantSignature !== signature) {
     container.innerHTML = renderParticipantButtons(participants, group);
