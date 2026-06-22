@@ -2107,3 +2107,201 @@ Legend：
 - 女子健康賽頁面載入正常且含兩個自訂 legend 項目。
 - 男女健康賽主圖、個人詳細資訊與點擊功能無載入錯誤。
 - `git diff --check` 通過。
+
+## 17. 健康賽第二期起算與同排名同分調整規劃
+
+本節為待確認後執行的調整規劃，尚未實作。
+
+### 17.1 問題與目標
+
+目前 `status.html` 的男子健康賽與女子健康賽都會從第一期量測開始計算積分。實際規則應為：
+
+- 第一期量測是初始值／基準值，不計入健康賽積分。
+- 第二期量測開始才是增減值，才開始計算排名積分與額外積分。
+- 同一量測期中若加權結果相同，參賽者應取得相同名次與相同排名積分。
+- 平手後的下一個名次採「下一個排名群」計算，不跳號。
+- 因平手造成最後一名高於 1 分可以接受。
+
+範例：總共 10 人時，若有兩人同為第二名，兩人都得 9 分；下一個排名群是第三名，得 8 分。
+
+### 17.2 影響範圍
+
+主要影響 `assets/js/status.js` 的健康賽資料正規化與排名計算：
+
+- `normalizeHealth()`
+  - 第一個健康賽量測影格需標記為基準期。
+  - 基準期保留畫面顯示與身體數據，但不累加任何積分。
+  - 第二期起才建立排名、排名積分與額外積分。
+- 健康賽排名資料結構
+  - 目前以排序後的 index 直接產生 `rank` 與 `rankingPoints`。
+  - 需改為依加權結果分組，讓同分者共享同一個 dense rank。
+- 健康賽排序與明細顯示
+  - 第一期間總積分應為 0。
+  - 第一期不應用基準值加權結果作為積分排名或總積分相同時的有效排名依據。
+  - 明細狀態需能表達「基準量測，不計分」。
+
+不影響健走賽計算。
+
+### 17.3 第一期間不計分規則
+
+健康賽時間軸仍沿用 `collectHealthTimeline()` 排序後的量測順序：
+
+- 排序後第一筆量測視為 baseline measurement。
+- `visibleFrames` 仍包含第一筆量測，讓畫面可以播放與顯示初始資料。
+- 第一筆量測若有有效資料：
+  - `hasData` 仍為 `true`。
+  - 身體數據、累計身體數據與加權百分比仍可供畫面呈現。
+  - `rankingPoints` 必須是 `0`。
+  - `extraPoints` 必須是 `0`，即使 CSV 第一期間的「額外積分」有值也不計入。
+  - `totalPoints`、`rankingPointsTotal`、`extraPointsTotal` 都維持 `0`。
+  - `rank` 建議為 `null`，避免畫面誤認第一期已有積分排名。
+- 第二筆量測起才進入計分：
+  - 依當期有效資料計算加權結果。
+  - 依當期加權結果產生排名與排名積分。
+  - 讀取當期「額外積分」並累加。
+  - 後續累計積分從第二期開始往後加總。
+
+建議在量測 frame 上加入語意欄位：
+
+```js
+{
+  measurementIndex,
+  isBaselineMeasurement,
+  isScoringMeasurement,
+}
+```
+
+或至少在 `normalizeHealth()` 內用 index 控制計分流程，避免只靠 `measurementId === "1"`，讓未來量測編號格式變動時仍可依排序後第一期判斷。
+
+### 17.4 同排名同分規則
+
+目前 `calculateRankingPoints(rankIndex, participantCount)` 使用排序 index 計算分數，因此即使加權結果相同，後排序的人也會少一分。需改成「依分數群組」計算：
+
+1. 先取出當期有效資料參賽者。
+2. 依 `weightedPercent` 由大到小排序。
+3. 加權結果相同者歸為同一個排名群。
+4. 第一個排名群是第 1 名，第二個排名群是第 2 名，依此類推。
+5. 排名積分用完整參賽者人數減去 dense rank 位移：
+
+```text
+rankingPoints = participantCount - (denseRank - 1)
+```
+
+若總人數是 10：
+
+```text
+第 1 名：10 分
+第 2 名：9 分
+第 2 名：9 分
+第 3 名：8 分
+```
+
+同排名群內仍需要穩定排序，建議使用暱稱或參賽者編號作為畫面排序輔助，但不得影響 `rank` 與 `rankingPoints`。
+
+### 17.5 浮點數與平手判斷
+
+加權結果由三個百分比乘上權重後相加，可能出現 JavaScript 浮點誤差。平手判斷不可直接依字串或畫面格式，建議採其中一種策略：
+
+- 建立 `normalizeWeightedScore(value)`，例如固定到 10 位小數後再比較。
+- 或建立 `isSameWeightedScore(a, b)`，使用很小的 epsilon 判斷。
+
+此判斷只用於排名分組；畫面顯示仍可沿用既有 `formatDecimal()`。
+
+### 17.6 畫面與使用者可見行為
+
+第一期健康賽畫面：
+
+- 累計積分排名圖中的所有人總積分應為 0。
+- 排名積分與額外積分都應為 0。
+- 個人明細顯示總積分 0、排名積分 0、額外積分 0。
+- 明細狀態建議顯示「基準量測，不計分」。
+- 若圖表排序需要穩定順序，第一期可依參賽者編號或暱稱排序，不應依基準加權結果產生排名效果。
+
+第二期起：
+
+- 開始依當期加權結果計排名分。
+- 額外積分從第二期開始累加。
+- 健康積分圖、tooltip 與個人明細使用相同的累計欄位。
+- 若當期有人平手，tooltip 與個人明細顯示的排名與排名積分需一致。
+
+### 17.7 預計程式調整
+
+`assets/js/status.js`：
+
+- 在 `normalizeHealth()` 中判斷 baseline 與 scoring measurement。
+- 建立健康賽排名 helper，例如：
+  - `buildHealthRankingMap(candidates, participantCount)`
+  - `normalizeWeightedScore(value)` 或 `isSameWeightedScore(a, b)`
+- 第一期間不呼叫或不套用 ranking map，並強制當期排名積分與額外積分為 0。
+- 第二期起才累加：
+  - `rankingPointsTotal`
+  - `extraPointsTotal`
+  - `totalPoints`
+- 調整 `latestValidWeightedPercent` 的用途：
+  - 第一期間的基準加權值不可作為積分排名的 tie breaker。
+  - 可考慮新增 `latestScoringWeightedPercent`，只在第二期後有效量測時更新。
+- `renderHealthDetail()` 補上第一期狀態文案。
+- `getHealthRanked()` 檢查第一期與總積分相同時的排序策略，避免基準值造成看似已排名。
+
+本次規劃不預設需要調整 `status.html` 結構；若實作後需要新增狀態文字容器，才再小幅補 HTML。
+
+### 17.8 測資與驗收規劃
+
+使用現有本機測資可先驗證第二期起算：
+
+- `status.html?source=local&scenario=complete&contest=health-men&asOf=2026-06-08`
+  - 男子健康賽第一期總積分全為 0。
+  - 排名積分全為 0。
+  - 額外積分全為 0。
+- `status.html?source=local&scenario=complete&contest=health-women&asOf=2026-06-08`
+  - 女子健康賽第一期總積分全為 0。
+  - 排名積分全為 0。
+  - 額外積分全為 0。
+- `status.html?source=local&scenario=complete&contest=health-men&asOf=2026-06-22`
+  - 男子健康賽第二期開始出現排名積分。
+  - 累計總積分只包含第二期，不包含第一期。
+- `status.html?source=local&scenario=complete&contest=health-women&asOf=2026-06-22`
+  - 女子健康賽第二期開始出現排名積分。
+  - 累計總積分只包含第二期，不包含第一期。
+
+平手同分需補驗收資料。建議做法：
+
+- 在 `scripts/generate-status-fixtures.ps1` 補出至少一組健康賽平手案例，或新增專用 local scenario。
+- 至少覆蓋男子 10 人情境：第二期有兩人同為第 2 名，兩人排名積分皆為 9，下一個排名群為第 3 名且得 8 分。
+- 至少覆蓋女子 11 人情境：同一量測期有兩人加權結果完全相同，兩人取得同分，下一個排名群不跳號。
+- 檢查最後一名在有大量平手時可能高於 1 分，且畫面不把此狀況視為錯誤。
+
+### 17.9 驗收項目
+
+- 男子健康賽第一期不累加排名積分。
+- 男子健康賽第一期不累加額外積分。
+- 女子健康賽第一期不累加排名積分。
+- 女子健康賽第一期不累加額外積分。
+- 第二期起才開始計算健康賽總積分。
+- 第一期間畫面不依基準加權結果產生有效排名誤解。
+- 同一量測期加權結果相同者顯示相同名次。
+- 同一量測期加權結果相同者取得相同排名積分。
+- 平手後下一個排名群不跳號。
+- 平手造成最後一名高於 1 分時，系統仍正常顯示。
+- 健康積分圖、tooltip、個人明細中的總積分、排名積分與額外積分一致。
+- 健走賽既有行為不受影響。
+- `npm run lint` 與 `git diff --check` 通過。
+
+### 17.10 預計異動檔案
+
+- `assets/js/status.js`
+  - 健康賽 baseline 不計分
+  - 健康賽 dense rank 同排名同分
+  - 健康賽第一期顯示狀態與排序輔助欄位
+- `scripts/generate-status-fixtures.ps1`
+  - 視需要新增或調整健康賽平手測資
+- `data/health-men.csv`
+  - 若調整 fixture generator，需同步更新產生結果
+- `data/health-women.csv`
+  - 若調整 fixture generator，需同步更新產生結果
+- `data/scenarios/*/health-men.csv`
+  - 若調整 fixture generator，需同步更新產生結果
+- `data/scenarios/*/health-women.csv`
+  - 若調整 fixture generator，需同步更新產生結果
+- `docs/status-page-planning.md`
+  - 本節作為後續實作與驗收依據
