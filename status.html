@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/x-icon" href="favicon.ico" />
+    <title>賽況總覽｜N-Partner 三比八大賽 2026</title>
+    <link rel="stylesheet" href="assets/css/styles.css" />
+    <script src="https://unpkg.com/papaparse@latest/papaparse.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+    <script src="assets/js/app.js" defer></script>
+    <script src="assets/js/status.js" defer></script>
+  </head>
+  <body class="status-page">
+    <nav class="nav">
+      <div class="wrap">
+        <a class="logo" href="index.html" aria-label="N-Partner 三比八大賽 2026 首頁">
+          <span class="logoMark"><img src="images/logo.png" alt="" /></span>
+          <span class="logoText">N-Partner</span>
+        </a>
+        <div class="links">
+          <a class="ghost" href="walking.html">健走賽</a>
+          <a class="ghost" href="health.html">健康賽</a>
+          <a class="primary" href="index.html#competitions" data-nav-link>回首頁</a>
+        </div>
+        <div class="links mobileOnly">
+          <a class="primary" href="index.html#competitions">回首頁</a>
+        </div>
+      </div>
+    </nav>
+
+    <main class="wrap status-shell" data-status-app>
+      <section class="status-tabs" aria-label="選擇賽事">
+        <button class="status-tab" type="button" data-contest-tab="walking">健走賽</button>
+        <button class="status-tab" type="button" data-contest-tab="health-men">男子健康賽</button>
+        <button class="status-tab" type="button" data-contest-tab="health-women">女子健康賽</button>
+      </section>
+
+      <section class="status-summary panel" aria-live="polite">
+        <div>
+          <div class="status-badges">
+            <span class="badge blue" data-contest-type>資料讀取中</span>
+            <span class="badge green status-source-note" data-source-note hidden></span>
+          </div>
+          <h2 data-contest-title>賽況載入中...</h2>
+          <p data-contest-description>請稍候，正在載入 CSV 並整理排名資料。</p>
+        </div>
+        <div class="status-period-card">
+          <span>目前進度</span>
+          <strong data-current-period>--</strong>
+          <small data-current-range>--</small>
+        </div>
+      </section>
+
+      <section class="status-error panel" data-status-error hidden></section>
+      <section class="status-notice panel" data-status-notice hidden></section>
+
+      <section class="status-layout" data-walking-panel hidden>
+        <div class="panel chart-panel">
+          <div class="chart-head">
+            <div class="chart-head-title">
+              <h2>累計步數排名</h2>
+              <strong data-walking-frame>--</strong>
+            </div>
+          </div>
+          <div class="chart-canvas walking-chart" data-walking-chart></div>
+        </div>
+        <aside class="panel detail-panel">
+          <h2>個人詳細資訊</h2>
+          <p class="detail-hint">點擊主圖上的參賽者長條可切換資料</p>
+          <div class="participant-pills" data-walking-participants></div>
+          <div class="detail-card" data-walking-detail></div>
+        </aside>
+      </section>
+
+      <section class="status-layout" data-health-panel hidden>
+        <div class="status-main-column">
+          <div class="panel chart-panel">
+            <div class="chart-head">
+              <div class="chart-head-title">
+                <h2>累計積分排名</h2>
+                <strong data-health-frame>--</strong>
+              </div>
+            </div>
+            <div class="chart-canvas score-chart" data-health-score-chart></div>
+            <div class="health-score-legend" aria-label="積分圖例">
+              <span class="health-score-legend__item">
+                <i class="health-score-legend__swatch solid" aria-hidden="true"></i>
+                排名積分
+              </span>
+              <span class="health-score-legend__item">
+                <i class="health-score-legend__swatch striped" aria-hidden="true"></i>
+                額外積分
+              </span>
+            </div>
+          </div>
+          <div class="panel chart-panel">
+            <div class="chart-head">
+              <div class="chart-head-title">
+                <h2>加權百分比線圖</h2>
+              </div>
+            </div>
+            <div class="chart-canvas line-chart" data-health-weighted-chart></div>
+          </div>
+        </div>
+        <aside class="panel detail-panel">
+          <h2>個人詳細資訊</h2>
+          <p class="detail-hint">點擊積分長條或線圖資料點可切換資料。</p>
+          <div class="participant-pills" data-health-participants></div>
+          <div class="detail-card" data-health-detail></div>
+          <h3 class="detail-subtitle">三項累計變化量</h3>
+          <div class="detail-delta-chart" data-detail-delta-chart></div>
+        </aside>
+      </section>
+    </main>
+
+    <footer class="footer">N-Partner｜三比八大賽 2026</footer>
+  </body>
+</html>
