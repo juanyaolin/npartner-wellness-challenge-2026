@@ -431,42 +431,42 @@ function normalizeHealth(rows, today) {
   const knownTimeline = collectHealthTimeline(rows);
   const visibleFrames = knownTimeline.filter(
     (measurement) => compareDateKeys(measurement.measurementDate, today) <= 0,
+  ).map(
+    (measurement, measurementIndex) => ({
+      ...measurement,
+      measurementIndex,
+      isBaselineMeasurement: measurementIndex === 0,
+      isScoringMeasurement: measurementIndex > 0,
+    }),
   );
   const records = collectLatestRecords(rows, "量測編號");
   warnInvalidEffectiveRecords(records, "health");
   const rankingByMeasurement = new Map();
 
   visibleFrames.forEach((measurement) => {
+    if (!measurement.isScoringMeasurement) {
+      rankingByMeasurement.set(measurement.measurementId, new Map());
+      return;
+    }
+
     const candidates = roster
       .map((person) => {
         const row = records.get(makeRecordKey(person.id, measurement.measurementId));
         const metrics = readHealthMetrics(row);
         const hasData = Boolean(row && isEffectiveRow(row) && metrics);
+        const weightedPercent = hasData ? calculateWeightedPercent(metrics) : null;
         return {
           id: person.id,
           nickname: person.nickname,
           hasData,
-          weightedPercent: hasData ? calculateWeightedPercent(metrics) : null,
+          weightedPercent,
         };
       })
-      .filter((item) => item.hasData)
-      .sort(
-        (a, b) =>
-          b.weightedPercent - a.weightedPercent ||
-          a.nickname.localeCompare(b.nickname, "zh-Hant"),
-      );
+      .filter((item) => item.hasData);
 
     rankingByMeasurement.set(
       measurement.measurementId,
-      new Map(
-        candidates.map((item, index) => [
-          item.id,
-          {
-            rank: index + 1,
-            rankingPoints: calculateRankingPoints(index, roster.length),
-          },
-        ]),
-      ),
+      buildHealthRankingMap(candidates, roster.length),
     );
   });
 
@@ -475,6 +475,7 @@ function normalizeHealth(rows, today) {
     let extraPointsTotal = 0;
     let hasValidDataToDate = false;
     let latestValidWeightedPercent = null;
+    let latestScoringWeightedPercent = null;
     const hasAnyData = knownTimeline.some((measurement) => {
       const row = records.get(makeRecordKey(person.id, measurement.measurementId));
       return isEffectiveRow(row) && Boolean(readHealthMetrics(row));
@@ -485,12 +486,18 @@ function normalizeHealth(rows, today) {
       const metrics = readHealthMetrics(row);
       const hasData = Boolean(row && isEffectiveRow(row) && metrics);
       const ranking = rankingByMeasurement.get(measurement.measurementId).get(person.id);
-      const extraPoints = hasData ? readFiniteNumber(row, "額外積分") || 0 : 0;
-      const rankingPoints = hasData ? ranking?.rankingPoints || 0 : 0;
+      const weightedPercent = hasData ? calculateWeightedPercent(metrics) : null;
+      const extraPoints =
+        hasData && measurement.isScoringMeasurement ? readFiniteNumber(row, "額外積分") || 0 : 0;
+      const rankingPoints =
+        hasData && measurement.isScoringMeasurement ? ranking?.rankingPoints || 0 : 0;
 
       if (hasData) {
         hasValidDataToDate = true;
-        latestValidWeightedPercent = calculateWeightedPercent(metrics);
+        latestValidWeightedPercent = weightedPercent;
+        if (measurement.isScoringMeasurement) {
+          latestScoringWeightedPercent = weightedPercent;
+        }
       }
       rankingPointsTotal += rankingPoints;
       extraPointsTotal += extraPoints;
@@ -507,14 +514,15 @@ function normalizeHealth(rows, today) {
         cumulativeSkeletalMuscleGainPercent: hasData
           ? metrics.cumulativeSkeletalMuscleGainPercent
           : null,
-        weightedPercent: hasData ? calculateWeightedPercent(metrics) : null,
+        weightedPercent,
         latestValidWeightedPercent,
+        latestScoringWeightedPercent,
         rankingPoints,
         extraPoints,
         rankingPointsTotal,
         extraPointsTotal,
         totalPoints: rankingPointsTotal + extraPointsTotal,
-        rank: hasData ? ranking?.rank || null : null,
+        rank: hasData && measurement.isScoringMeasurement ? ranking?.rank || null : null,
       };
     });
 
@@ -639,6 +647,36 @@ function calculateWeightedPercent(metrics) {
     metrics.bodyFatLossPercent * weights.bodyFatLossWeight +
     metrics.skeletalMuscleGainPercent * weights.skeletalMuscleGainWeight
   );
+}
+
+function buildHealthRankingMap(candidates, participantCount) {
+  const rankings = new Map();
+  const sorted = candidates.slice().sort(
+    (a, b) =>
+      b.weightedPercent - a.weightedPercent ||
+      a.nickname.localeCompare(b.nickname, "zh-Hant") ||
+      naturalOrder(a.id, b.id),
+  );
+  let previousScore = null;
+  let denseRank = 0;
+
+  sorted.forEach((item) => {
+    const score = normalizeWeightedScore(item.weightedPercent);
+    if (previousScore === null || score !== previousScore) {
+      denseRank += 1;
+      previousScore = score;
+    }
+    rankings.set(item.id, {
+      rank: denseRank,
+      rankingPoints: calculateRankingPoints(denseRank - 1, participantCount),
+    });
+  });
+
+  return rankings;
+}
+
+function normalizeWeightedScore(value) {
+  return Number(value.toFixed(10));
 }
 
 function calculateRankingPoints(rankIndex, participantCount) {
@@ -1120,7 +1158,9 @@ function renderHealth(data, frame) {
   renderHealthWeightedChart(data, frame);
   renderDetailDeltaChart(data, frame);
 
-  if (!ranked.some((participant) => participant.current.hasData)) {
+  if (measurement.isBaselineMeasurement) {
+    showNotice("本次為基準量測，不計入積分；第二次量測起開始計分。");
+  } else if (!ranked.some((participant) => participant.current.hasData)) {
     showNotice("本次量測無人提供有效資料，當期均為 0 分，已有成績者仍依累計積分排名。");
   }
 }
@@ -1136,8 +1176,8 @@ function getHealthRanked(data, frame) {
         Number(b.current.hasValidDataToDate) -
           Number(a.current.hasValidDataToDate) ||
         b.current.totalPoints - a.current.totalPoints ||
-        (b.current.latestValidWeightedPercent ?? -Infinity) -
-          (a.current.latestValidWeightedPercent ?? -Infinity) ||
+        (b.current.latestScoringWeightedPercent ?? -Infinity) -
+          (a.current.latestScoringWeightedPercent ?? -Infinity) ||
         naturalOrder(a.id, b.id),
     );
 }
@@ -1160,11 +1200,13 @@ function renderHealthScoreChart(ranked, frame) {
         formatter: (params) => {
           const participant = ranked[params[0]?.dataIndex];
           if (!participant) return "";
-          const status = participant.current.hasData
-            ? ""
-            : participant.current.hasValidDataToDate
-              ? "本次未量測／資料無效，當期 0 分"
-              : "截至目前資料皆無效";
+          const status = !participant.current.hasValidDataToDate
+            ? "截至目前資料皆無效"
+            : participant.current.isBaselineMeasurement
+              ? "基準量測，不計分"
+              : participant.current.hasData
+                ? ""
+                : "本次未量測／資料無效，當期 0 分";
           const statusLine = status ? `${escapeHtml(status)}<br/>` : "";
           return [
             escapeHtml(participant.nickname),
@@ -1325,17 +1367,17 @@ function renderHealthDetail(data, ranked, frame) {
   if (!participant) return "<p>尚無參賽者資料。</p>";
 
   const current = participant.measurements[frame];
-  const rankedWithData = ranked.filter((item) => item.current.hasValidDataToDate);
-  const rankIndex = rankedWithData.findIndex((item) => item.id === participant.id);
-  const rank = rankIndex >= 0 ? rankIndex + 1 : null;
+  const rank = current.rank;
   const status = !current.hasValidDataToDate
     ? "截至目前尚無任何有效資料"
+    : current.isBaselineMeasurement
+      ? "基準量測，不計分"
     : current.hasData
       ? "有效資料"
       : "本次未量測，當期 0 分";
 
   return `
-    ${renderDetailHeading(participant, rank ? `目前第 ${rank} 名｜${current.measurementDate}` : `未排名｜${current.measurementDate}`, status)}
+    ${renderDetailHeading(participant, rank ? `本期第 ${rank} 名｜${current.measurementDate}` : `未排名｜${current.measurementDate}`, status)}
     <div class="metric-grid">
       ${renderMetric("總積分", `${formatNumber(current.totalPoints)} 分`)}
       ${renderMetric("排名積分", `${formatNumber(current.rankingPointsTotal)} 分`)}
@@ -1485,7 +1527,8 @@ function getCachedActiveData() {
 }
 
 function renderDetailHeading(participant, subtitle, status) {
-  const missingClass = status === "有效資料" ? "" : " missing";
+  const isDataStatus = status === "有效資料" || status === "基準量測，不計分";
+  const missingClass = isDataStatus ? "" : " missing";
   const statusText =
     status === "有效資料"
       ? ""

@@ -2110,7 +2110,7 @@ Legend：
 
 ## 17. 健康賽第二期起算與同排名同分調整規劃
 
-本節為待確認後執行的調整規劃，尚未實作。
+本節原為待確認後執行的調整規劃；目前已完成實作與驗證。
 
 ### 17.1 問題與目標
 
@@ -2305,3 +2305,43 @@ rankingPoints = participantCount - (denseRank - 1)
   - 若調整 fixture generator，需同步更新產生結果
 - `docs/status-page-planning.md`
   - 本節作為後續實作與驗收依據
+
+### 17.11 本次實作結果
+
+健康賽計分：
+
+- 男子與女子健康賽皆改為第一期量測不計分。
+- 排序後第一個可見量測 frame 會被標記為基準量測。
+- 基準量測仍顯示身體數據、累計身體數據與加權百分比。
+- 基準量測的排名積分、額外積分與總積分皆固定為 0。
+- 第二期起才計算當期排名積分與額外積分，並開始累計總積分。
+
+同排名同分：
+
+- 健康賽當期排名改用 dense rank。
+- 加權結果相同者會取得相同名次與相同排名積分。
+- 平手後下一個排名群不跳號。
+- 平手判斷會先將加權結果正規化到固定小數位，避免 JavaScript 浮點誤差造成同分被拆開。
+
+畫面：
+
+- 健康賽第一期會顯示提示：`本次為基準量測，不計入積分；第二次量測起開始計分。`
+- 健康賽個人明細第一期顯示 `基準量測，不計分`。
+- 健康賽個人明細的名次改為當期名次文案，例如 `本期第 2 名`。
+- 健康賽累計積分圖排序不再用第一期基準加權值當 tie breaker。
+
+測資：
+
+- 本機健康賽 fixture 第一筆量測改成與 Google Sheet CSV 相同語意的 0 基準值。
+- 本機健康賽 fixture 第二筆量測加入平手案例。
+- 男子組第二期：第 2、3 位參賽者同為本期第 2 名，排名積分皆為 9；下一位為本期第 3 名，排名積分為 8。
+- 女子組第二期：第 2、3 位參賽者同為本期第 2 名，排名積分皆為 10；下一位為本期第 3 名，排名積分為 9。
+
+驗證結果：
+
+- `npm run lint` 通過。
+- `git diff --check` 通過。
+- 本機頁面 `status.html?source=local&scenario=complete&contest=health-men&asOf=2026-06-08` 已確認第一期總積分、排名積分與額外積分皆為 0。
+- 本機頁面 `status.html?source=local&scenario=complete&contest=health-women&asOf=2026-06-08` 已確認第一期總積分、排名積分與額外積分皆為 0。
+- 本機頁面 `status.html?source=local&scenario=complete&contest=health-men&asOf=2026-06-22` 已確認男子組第二期同名次同分與下一排名群不跳號。
+- 本機頁面 `status.html?source=local&scenario=complete&contest=health-women&asOf=2026-06-22` 已確認女子組第二期同名次同分與下一排名群不跳號。

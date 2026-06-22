@@ -107,21 +107,42 @@ function New-HealthRows {
     $cumulativeMuscle = 0.0
 
     for ($measurement = 1; $measurement -le $measurementDates.Count; $measurement++) {
-      $weight = 0.20 + (($participant * 13 + $measurement * 7 + $ValueOffset) % 19) / 20.0
-      $bodyFat = 0.10 + (($participant * 11 + $measurement * 5 + $ValueOffset) % 23) / 20.0
-      $muscle = 0.05 + (($participant * 7 + $measurement * 3 + $ValueOffset) % 13) / 20.0
+      if ($measurement -eq 1) {
+        $weight = 0.0
+        $bodyFat = 0.0
+        $muscle = 0.0
+        $extraPoints = ""
+      } elseif ($measurement -eq 2) {
+        if ($participant -eq 1) {
+          $score = 5.0
+        } elseif ($participant -in @(2, 3)) {
+          $score = 4.0
+        } else {
+          $score = [Math]::Max(0.5, 4.0 - (($participant - 3) * 0.35))
+        }
 
-      if (($participant + $measurement + $ValueOffset) % 8 -eq 0) {
-        $weight *= -0.25
-      }
-      if (($participant * 2 + $measurement + $ValueOffset) % 10 -eq 0) {
-        $bodyFat *= -0.20
+        $weight = $score
+        $bodyFat = $score
+        $muscle = $score
+        $extraPoints = if ($participant -in @(2, 3)) { 0 } else { ($participant + $measurement + $ValueOffset) % 3 }
+      } else {
+        $weight = 0.20 + (($participant * 13 + $measurement * 7 + $ValueOffset) % 19) / 20.0
+        $bodyFat = 0.10 + (($participant * 11 + $measurement * 5 + $ValueOffset) % 23) / 20.0
+        $muscle = 0.05 + (($participant * 7 + $measurement * 3 + $ValueOffset) % 13) / 20.0
+
+        if (($participant + $measurement + $ValueOffset) % 8 -eq 0) {
+          $weight *= -0.25
+        }
+        if (($participant * 2 + $measurement + $ValueOffset) % 10 -eq 0) {
+          $bodyFat *= -0.20
+        }
+
+        $extraPoints = ($participant + $measurement + $ValueOffset) % 3
       }
 
       $cumulativeWeight += $weight
       $cumulativeBodyFat += $bodyFat
       $cumulativeMuscle += $muscle
-      $extraPoints = ($participant + $measurement + $ValueOffset) % 3
 
       $rows.Add((Convert-ToCsvLine @(
         $participant,
