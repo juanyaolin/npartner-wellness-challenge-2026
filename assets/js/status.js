@@ -1314,10 +1314,13 @@ function renderWalkingWeeklyChart(data, visibleWeekCount) {
           return [
             `第 ${escapeHtml(period.periodId)} 週`,
             `${period.startDate}～${period.endDate}`,
-            ...params.map(
-              (item) =>
-                `${item.marker}${escapeHtml(item.seriesName)}：${formatNumber(item.value)} 步`,
-            ),
+            ...params
+              .slice()
+              .sort((a, b) => Number(b.value) - Number(a.value))
+              .map(
+                (item) =>
+                  `${item.marker}${escapeHtml(item.seriesName)}：${formatNumber(item.value)} 步`,
+              ),
           ].join("<br/>");
         },
       },
@@ -1576,6 +1579,7 @@ function renderHealthWeightedChart(data, frame) {
       grid: { top: 24, right: 26, bottom: 64, left: 48 },
       tooltip: {
         trigger: "axis",
+        order: "valueDesc",
         valueFormatter: (value) => (value === null ? "未量測" : `${formatDecimal(value)}%`),
       },
       legend: {
