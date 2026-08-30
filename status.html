@@ -56,18 +56,28 @@
       <section class="status-notice panel" data-status-notice hidden></section>
 
       <section class="status-layout" data-walking-panel hidden>
-        <div class="panel chart-panel">
-          <div class="chart-head">
-            <div class="chart-head-title">
-              <h2>累計步數排名</h2>
-              <strong data-walking-frame>--</strong>
+        <div class="status-main-column">
+          <div class="panel chart-panel">
+            <div class="chart-head">
+              <div class="chart-head-title">
+                <h2>累計步數排名</h2>
+                <strong data-walking-frame>--</strong>
+              </div>
             </div>
+            <div class="chart-canvas walking-chart" data-walking-chart></div>
           </div>
-          <div class="chart-canvas walking-chart" data-walking-chart></div>
+          <div class="panel chart-panel">
+            <div class="chart-head">
+              <div class="chart-head-title">
+                <h2>每週步數線圖</h2>
+              </div>
+            </div>
+            <div class="chart-canvas line-chart" data-walking-weekly-chart></div>
+          </div>
         </div>
         <aside class="panel detail-panel">
           <h2>個人詳細資訊</h2>
-          <p class="detail-hint">點擊主圖上的參賽者長條可切換資料</p>
+          <p class="detail-hint">點擊排名長條或線圖資料點可切換資料。</p>
           <div class="participant-pills" data-walking-participants></div>
           <div class="detail-card" data-walking-detail></div>
         </aside>
