@@ -106,10 +106,12 @@ const state = {
   currentFrame: 0,
   walkingChartFrame: -1,
   walkingChartSignature: "",
+  walkingWeeklyVisibleCount: -1,
   requestId: 0,
   abortController: null,
   charts: {
     walking: null,
+    walkingWeekly: null,
     healthScore: null,
     healthWeighted: null,
     detailDelta: null,
@@ -128,6 +130,7 @@ const els = {
   notice: document.querySelector("[data-status-notice]"),
   walkingPanel: document.querySelector("[data-walking-panel]"),
   walkingChart: document.querySelector("[data-walking-chart]"),
+  walkingWeeklyChart: document.querySelector("[data-walking-weekly-chart]"),
   walkingFrame: document.querySelector("[data-walking-frame]"),
   walkingParticipants: document.querySelector("[data-walking-participants]"),
   walkingDetail: document.querySelector("[data-walking-detail]"),
@@ -200,6 +203,7 @@ async function setActiveContest(contestKey) {
   state.currentFrame = 0;
   state.walkingChartFrame = -1;
   state.walkingChartSignature = "";
+  state.walkingWeeklyVisibleCount = -1;
   updateUrlContest(contestKey);
   updateTabState(contestKey);
   setLoading(contest);
@@ -335,13 +339,66 @@ function normalizeWalking(rows, today) {
   const knownTimeline = collectWalkingTimeline(rows);
   const records = collectLatestRecords(rows, "週期編號");
   warnInvalidEffectiveRecords(records, "walking");
-  const visiblePeriods = knownTimeline.filter(
-    (period) => compareDateKeys(period.startDate, today) <= 0,
+  const competitionPeriods = collectWalkingCompetitionPeriods(knownTimeline).map(
+    (competitionPeriod) => {
+      const allValid = roster.every((person) =>
+        competitionPeriod.weeks.every((week) =>
+          isValidWalkingRecord(records.get(makeRecordKey(person.id, week.periodId))),
+        ),
+      );
+      const isEligible = compareDateKeys(competitionPeriod.publicationDate, today) <= 0;
+      const reachedForcedSettlement =
+        compareDateKeys(competitionPeriod.forcedSettlementDate, today) <= 0;
+      return {
+        ...competitionPeriod,
+        allValid,
+        isEligible,
+        reachedForcedSettlement,
+        isPublished: isEligible && (allValid || reachedForcedSettlement),
+      };
+    },
   );
-  const visibleDays = visiblePeriods.flatMap((period) =>
-    expandVisiblePeriodDays(period, today),
+  const publishedCompetitionPeriods = competitionPeriods.filter(
+    (competitionPeriod) => competitionPeriod.isPublished,
   );
-  const visibleFrames = expandDaysToTicks(visibleDays);
+  const publishedPeriods = publishedCompetitionPeriods.flatMap(
+    (competitionPeriod) => competitionPeriod.weeks,
+  );
+  const latestCompetitionPeriod =
+    publishedCompetitionPeriods[publishedCompetitionPeriods.length - 1] || null;
+  const pendingCompetitionPeriod =
+    competitionPeriods
+      .slice()
+      .reverse()
+      .find(
+        (competitionPeriod) => competitionPeriod.isEligible && !competitionPeriod.isPublished,
+      ) || null;
+  const visibleDays = latestCompetitionPeriod
+    ? latestCompetitionPeriod.weeks.flatMap(expandAllPeriodDays)
+    : [];
+  const animationTicks = expandDaysToTicks(visibleDays).map((tick) => ({
+    ...tick,
+    competitionPeriodId: latestCompetitionPeriod?.competitionPeriodId,
+    competitionStartDate: latestCompetitionPeriod?.startDate,
+    competitionEndDate: latestCompetitionPeriod?.endDate,
+    isCompetitionBaseline: false,
+  }));
+  const baselineFrame = latestCompetitionPeriod
+    ? {
+        ...visibleDays[0],
+        competitionPeriodId: latestCompetitionPeriod.competitionPeriodId,
+        competitionStartDate: latestCompetitionPeriod.startDate,
+        competitionEndDate: latestCompetitionPeriod.endDate,
+        date: latestCompetitionPeriod.startDate,
+        dayIndex: 0,
+        dayCount: 14,
+        daySequence: 0,
+        tickIndex: 0,
+        ticksPerDay: STATUS_CONFIG.walkingAnimation.framesPerDay,
+        isCompetitionBaseline: true,
+      }
+    : null;
+  const visibleFrames = baselineFrame ? [baselineFrame, ...animationTicks] : [];
 
   const participants = roster.map((person, index) => {
     let cumulativeSteps = 0;
@@ -352,13 +409,13 @@ function normalizeWalking(rows, today) {
       return isEffectiveRow(row) && readFiniteNumber(row, "周步數") !== null;
     });
 
-    visiblePeriods.forEach((period) => {
+    publishedPeriods.forEach((period) => {
       const row = records.get(makeRecordKey(person.id, period.periodId));
       const parsedSteps = readFiniteNumber(row, "周步數");
       const hasData = Boolean(row && isEffectiveRow(row) && parsedSteps !== null);
       const steps = hasData ? parsedSteps : 0;
+      const hasValidDataBeforePeriod = hasValidDataToDate;
       if (hasData) hasValidDataToDate = true;
-      const periodDays = expandVisiblePeriodDays(period, today);
       const allPeriodDays = expandAllPeriodDays(period);
       const allTicks = expandDaysToTicks(allPeriodDays);
       const tickIncrements = hasData
@@ -368,12 +425,10 @@ function normalizeWalking(rows, today) {
             `${STATUS_CONFIG.walkingAnimation.seedVersion}:${person.id}:${period.periodId}`,
           )
         : Array(allTicks.length).fill(0);
-      const visibleTickCount =
-        periodDays.length * STATUS_CONFIG.walkingAnimation.framesPerDay;
       const periodStartCumulative = cumulativeSteps;
       let dayStepsToDate = 0;
       let currentDate = "";
-      const tickFrames = allTicks.slice(0, visibleTickCount).map((tick, tickIndex) => {
+      const tickFrames = allTicks.map((tick, tickIndex) => {
         if (tick.date !== currentDate) {
           currentDate = tick.date;
           dayStepsToDate = 0;
@@ -397,6 +452,7 @@ function normalizeWalking(rows, today) {
         ...period,
         steps,
         hasData,
+        hasValidDataBeforePeriod,
         hasValidDataToDate,
         periodStartCumulative,
         cumulativeSteps,
@@ -404,13 +460,36 @@ function normalizeWalking(rows, today) {
       });
     });
 
+    const latestPeriodFrames = latestCompetitionPeriod
+      ? latestCompetitionPeriod.weeks.flatMap(
+          (period) => periodMap.get(period.periodId)?.tickFrames || [],
+        )
+      : [];
+    const firstLatestPeriod = latestCompetitionPeriod
+      ? periodMap.get(latestCompetitionPeriod.weeks[0].periodId)
+      : null;
+    const participantBaseline = baselineFrame
+      ? {
+          ...baselineFrame,
+          tickSteps: 0,
+          dayStepsToDate: 0,
+          periodSteps: firstLatestPeriod?.steps || 0,
+          periodStepsToDate: 0,
+          cumulativeSteps: firstLatestPeriod?.periodStartCumulative || 0,
+          hasData: firstLatestPeriod?.hasData || false,
+          hasValidDataToDate: firstLatestPeriod?.hasValidDataBeforePeriod || false,
+        }
+      : null;
+    const alignedLatestFrames = latestPeriodFrames.map((tickFrame, tickIndex) => ({
+      ...tickFrame,
+      ...animationTicks[tickIndex],
+    }));
+
     return {
       ...person,
       color: STATUS_CONFIG.colors[index % STATUS_CONFIG.colors.length],
-      periods: visiblePeriods.map((period) => periodMap.get(period.periodId)),
-      tickFrames: visiblePeriods.flatMap(
-        (period) => periodMap.get(period.periodId)?.tickFrames || [],
-      ),
+      periods: publishedPeriods.map((period) => periodMap.get(period.periodId)),
+      tickFrames: participantBaseline ? [participantBaseline, ...alignedLatestFrames] : [],
       totalSteps: cumulativeSteps,
       hasAnyData,
     };
@@ -420,7 +499,12 @@ function normalizeWalking(rows, today) {
     type: "walking",
     participants,
     knownTimeline,
-    visiblePeriods,
+    competitionPeriods,
+    publishedCompetitionPeriods,
+    publishedPeriods,
+    latestCompetitionPeriod,
+    pendingCompetitionPeriod,
+    visiblePeriods: publishedPeriods,
     visibleDays,
     visibleFrames,
   };
@@ -429,18 +513,40 @@ function normalizeWalking(rows, today) {
 function normalizeHealth(rows, today) {
   const roster = collectRoster(rows);
   const knownTimeline = collectHealthTimeline(rows);
-  const visibleFrames = knownTimeline.filter(
-    (measurement) => compareDateKeys(measurement.measurementDate, today) <= 0,
-  ).map(
-    (measurement, measurementIndex) => ({
-      ...measurement,
-      measurementIndex,
-      isBaselineMeasurement: measurementIndex === 0,
-      isScoringMeasurement: measurementIndex > 0,
-    }),
-  );
   const records = collectLatestRecords(rows, "量測編號");
   warnInvalidEffectiveRecords(records, "health");
+  const scheduledFrames = knownTimeline.map((measurement, measurementIndex) => {
+    const isBaselineMeasurement = measurementIndex === 0;
+    const allValid = roster.every((person) =>
+      isValidHealthRecord(records.get(makeRecordKey(person.id, measurement.measurementId))),
+    );
+    const forcedSettlementDate =
+      knownTimeline[measurementIndex + 1]?.measurementDate ||
+      addDaysToDateKey(measurement.measurementDate, 14);
+    const isEligible = compareDateKeys(measurement.measurementDate, today) <= 0;
+    const reachedForcedSettlement = compareDateKeys(forcedSettlementDate, today) <= 0;
+    return {
+      ...measurement,
+      measurementIndex,
+      isBaselineMeasurement,
+      isScoringMeasurement: !isBaselineMeasurement,
+      publicationDate: measurement.measurementDate,
+      forcedSettlementDate,
+      allValid,
+      isEligible,
+      reachedForcedSettlement,
+      isPublished: isEligible && (isBaselineMeasurement || allValid || reachedForcedSettlement),
+    };
+  });
+  const visibleFrames = scheduledFrames.filter((measurement) => measurement.isPublished);
+  const pendingMeasurement =
+    scheduledFrames
+      .slice()
+      .reverse()
+      .find(
+        (measurement) =>
+          measurement.isScoringMeasurement && measurement.isEligible && !measurement.isPublished,
+      ) || null;
   const rankingByMeasurement = new Map();
 
   visibleFrames.forEach((measurement) => {
@@ -541,6 +647,8 @@ function normalizeHealth(rows, today) {
     type: "health",
     participants,
     knownTimeline,
+    scheduledFrames,
+    pendingMeasurement,
     visibleFrames,
   };
 }
@@ -568,12 +676,49 @@ function collectWalkingTimeline(rows) {
     const startDate = normalizeDateText(readText(row, "週期開始日期"));
     const endDate = normalizeDateText(readText(row, "週期結束日期"));
     if (!periodId || !startDate || !endDate) return;
+    const existing = map.get(periodId);
+    if (existing && (existing.startDate !== startDate || existing.endDate !== endDate)) {
+      throw new Error(`第 ${periodId} 週的日期範圍不一致，請檢查 CSV。`);
+    }
     map.set(periodId, { periodId, startDate, endDate });
   });
   return Array.from(map.values()).sort(
-    (a, b) =>
-      compareDateKeys(a.startDate, b.startDate) || naturalOrder(a.periodId, b.periodId),
+    (a, b) => compareDateKeys(a.startDate, b.startDate) || naturalOrder(a.periodId, b.periodId),
   );
+}
+
+function collectWalkingCompetitionPeriods(timeline) {
+  if (timeline.length % 2 !== 0) {
+    throw new Error("健走週資料無法完整配成 14 天競賽期次，請檢查是否缺少一週。");
+  }
+
+  timeline.forEach((week, index) => {
+    const dayCount = differenceInDays(week.startDate, week.endDate) + 1;
+    if (dayCount !== 7) {
+      throw new Error(`第 ${week.periodId} 週不是完整 7 天，請檢查 CSV 日期。`);
+    }
+    const previous = timeline[index - 1];
+    if (previous && addDaysToDateKey(previous.endDate, 1) !== week.startDate) {
+      throw new Error(
+        `第 ${previous.periodId} 週與第 ${week.periodId} 週的日期不連續，無法建立競賽期次。`,
+      );
+    }
+  });
+
+  return Array.from({ length: timeline.length / 2 }, (_, index) => {
+    const weeks = timeline.slice(index * 2, index * 2 + 2);
+    const startDate = weeks[0].startDate;
+    const endDate = weeks[1].endDate;
+    const publicationDate = addDaysToDateKey(endDate, 1);
+    return {
+      competitionPeriodId: String(index + 1),
+      startDate,
+      endDate,
+      publicationDate,
+      forcedSettlementDate: addDaysToDateKey(publicationDate, 14),
+      weeks,
+    };
+  });
 }
 
 function collectHealthTimeline(rows) {
@@ -627,6 +772,14 @@ function warnInvalidEffectiveRecords(records, type) {
   });
 }
 
+function isValidWalkingRecord(row) {
+  return Boolean(row && isEffectiveRow(row) && readFiniteNumber(row, "周步數") !== null);
+}
+
+function isValidHealthRecord(row) {
+  return Boolean(row && isEffectiveRow(row) && readHealthMetrics(row));
+}
+
 function readHealthMetrics(row) {
   if (!row) return null;
   const values = {
@@ -651,12 +804,14 @@ function calculateWeightedPercent(metrics) {
 
 function buildHealthRankingMap(candidates, participantCount) {
   const rankings = new Map();
-  const sorted = candidates.slice().sort(
-    (a, b) =>
-      b.weightedPercent - a.weightedPercent ||
-      a.nickname.localeCompare(b.nickname, "zh-Hant") ||
-      naturalOrder(a.id, b.id),
-  );
+  const sorted = candidates
+    .slice()
+    .sort(
+      (a, b) =>
+        b.weightedPercent - a.weightedPercent ||
+        a.nickname.localeCompare(b.nickname, "zh-Hant") ||
+        naturalOrder(a.id, b.id),
+    );
   let previousScore = null;
   let denseRank = 0;
 
@@ -681,12 +836,6 @@ function normalizeWeightedScore(value) {
 
 function calculateRankingPoints(rankIndex, participantCount) {
   return Math.max(participantCount - rankIndex, 0);
-}
-
-function expandVisiblePeriodDays(period, today) {
-  const endDate =
-    compareDateKeys(period.endDate, today) > 0 ? parseDateKey(today) : parseDateKey(period.endDate);
-  return expandDateRange(period, endDate);
 }
 
 function expandAllPeriodDays(period) {
@@ -732,9 +881,8 @@ function distributeStepsRandomly(totalSteps, tickCount, seedText) {
   if (tickCount <= 0 || totalSteps <= 0) return Array(Math.max(tickCount, 0)).fill(0);
 
   const random = createSeededRandom(hashString(seedText));
-  const peakCenters = Array.from(
-    { length: 1 + Math.floor(random() * 3) },
-    () => Math.floor(random() * tickCount),
+  const peakCenters = Array.from({ length: 1 + Math.floor(random() * 3) }, () =>
+    Math.floor(random() * tickCount),
   );
   const weights = Array.from({ length: tickCount }, (_, index) => {
     let weight = 0.45 + random() * 0.9;
@@ -818,13 +966,14 @@ function resolveReferenceDate(rows, type) {
     throw new Error("模擬日期格式錯誤，請使用 YYYY-MM-DD。");
   }
 
-  const timeline =
-    type === "walking" ? collectWalkingTimeline(rows) : collectHealthTimeline(rows);
+  const timeline = type === "walking" ? collectWalkingTimeline(rows) : collectHealthTimeline(rows);
   if (!timeline.length) return asOf;
-  const firstDate =
-    type === "walking" ? timeline[0].startDate : timeline[0].measurementDate;
+  const firstDate = type === "walking" ? timeline[0].startDate : timeline[0].measurementDate;
   const lastItem = timeline[timeline.length - 1];
-  const lastDate = type === "walking" ? lastItem.endDate : lastItem.measurementDate;
+  const lastDate =
+    type === "walking"
+      ? collectWalkingCompetitionPeriods(timeline).at(-1).forcedSettlementDate
+      : addDaysToDateKey(lastItem.measurementDate, 14);
 
   if (compareDateKeys(asOf, firstDate) < 0 || compareDateKeys(asOf, lastDate) > 0) {
     throw new Error(`模擬日期超出賽程範圍，可用日期為 ${firstDate} 至 ${lastDate}。`);
@@ -851,7 +1000,9 @@ function getTaipeiToday() {
 }
 
 function normalizeDateText(value) {
-  const match = String(value).trim().match(/^(\d{4})[/-](\d{1,2})[/-](\d{1,2})$/);
+  const match = String(value)
+    .trim()
+    .match(/^(\d{4})[/-](\d{1,2})[/-](\d{1,2})$/);
   if (!match) return "";
   return `${match[1]}/${match[2].padStart(2, "0")}/${match[3].padStart(2, "0")}`;
 }
@@ -859,6 +1010,16 @@ function normalizeDateText(value) {
 function parseDateKey(value) {
   const [year, month, day] = value.split("/").map(Number);
   return new Date(Date.UTC(year, month - 1, day));
+}
+
+function addDaysToDateKey(value, days) {
+  const date = parseDateKey(value);
+  date.setUTCDate(date.getUTCDate() + days);
+  return formatDateKey(date);
+}
+
+function differenceInDays(startDate, endDate) {
+  return Math.round((parseDateKey(endDate) - parseDateKey(startDate)) / 86400000);
 }
 
 function formatDateKey(value) {
@@ -903,6 +1064,13 @@ function renderNotStarted(contest, data) {
   els.title.textContent = contest.label;
   els.type.textContent = contest.type === "walking" ? "步數排名" : "健康積分";
   els.description.textContent = contest.description;
+  if (contest.type === "walking" && data.pendingCompetitionPeriod) {
+    const pending = data.pendingCompetitionPeriod;
+    els.currentPeriod.textContent = "首期資料彙整中";
+    els.currentRange.textContent = `${pending.startDate}～${pending.endDate}`;
+    showNotice("首期賽事資料正在彙整，完成後將統一更新賽況。");
+    return;
+  }
   els.currentPeriod.textContent = "尚未開始";
   els.currentRange.textContent = "目前沒有已到達日期的賽事資料";
   showNotice(`已載入 ${data.participants.length} 位參賽者，第一個賽事日期尚未到達。`);
@@ -919,7 +1087,9 @@ function renderWalking(data, frame) {
   updateSummary(contest, day);
   els.walkingPanel.hidden = false;
   els.healthPanel.hidden = true;
-  els.walkingFrame.textContent = `第 ${day.daySequence} 天 / ${data.visibleDays.length} 天`;
+  els.walkingFrame.textContent = day.isCompetitionBaseline
+    ? `第 ${day.competitionPeriodId} 期期初`
+    : `第 ${day.daySequence} 天 / ${data.visibleDays.length} 天`;
   updateParticipantButtons(
     els.walkingParticipants,
     data.participants.map((participant) => ({
@@ -933,8 +1103,21 @@ function renderWalking(data, frame) {
     renderWalkingChart(data, ranked, frame);
     state.walkingChartFrame = frame;
   }
+  const visibleWeekCount = getWalkingVisibleWeekCount(data, frame);
+  if (state.walkingWeeklyVisibleCount !== visibleWeekCount) {
+    renderWalkingWeeklyChart(data, visibleWeekCount);
+    state.walkingWeeklyVisibleCount = visibleWeekCount;
+  }
 
-  if (!ranked.some((participant) => participant.current.hasData)) {
+  if (data.pendingCompetitionPeriod) {
+    const pending = data.pendingCompetitionPeriod;
+    showNotice(
+      `${pending.startDate}～${pending.endDate} 資料彙整中，完成後將統一更新；目前顯示上一個已公開期次。`,
+    );
+  } else if (
+    !day.isCompetitionBaseline &&
+    !ranked.some((participant) => participant.current.hasData)
+  ) {
     showNotice("本日所屬週期目前無人提供有效資料，已有成績者仍依累計步數排名。");
   }
 }
@@ -947,8 +1130,7 @@ function getWalkingRanked(data, frame) {
     }))
     .sort(
       (a, b) =>
-        Number(b.current.hasValidDataToDate) -
-          Number(a.current.hasValidDataToDate) ||
+        Number(b.current.hasValidDataToDate) - Number(a.current.hasValidDataToDate) ||
         b.current.cumulativeSteps - a.current.cumulativeSteps ||
         naturalOrder(a.id, b.id),
     );
@@ -975,6 +1157,7 @@ function renderWalkingChart(data, ranked, frame) {
     name: participant.nickname,
     hasData: participant.current.hasData,
     hasValidDataToDate: participant.current.hasValidDataToDate,
+    isCompetitionBaseline: participant.current.isCompetitionBaseline,
     itemStyle: {
       color: participant.current.hasValidDataToDate ? participant.color : "#cbd5dc",
       opacity: participant.current.hasValidDataToDate ? 1 : 0.65,
@@ -983,9 +1166,7 @@ function renderWalkingChart(data, ranked, frame) {
       participant.current.cumulativeSteps === 0
         ? {
             position: "right",
-            color: participant.current.hasValidDataToDate
-              ? participant.color
-              : "#78909d",
+            color: participant.current.hasValidDataToDate ? participant.color : "#78909d",
             textShadowBlur: 0,
           }
         : undefined,
@@ -1008,11 +1189,13 @@ function renderWalkingChart(data, ranked, frame) {
         tooltip: {
           trigger: "item",
           formatter: (params) => {
-            const status = params.data.hasData
-              ? ""
-              : params.data.hasValidDataToDate
-                ? "<br/>本週未提供資料，排名沿用累計步數"
-                : "<br/>截至目前尚無有效資料";
+            const status = params.data.isCompetitionBaseline
+              ? "<br/>最新公開期次的期初累計"
+              : params.data.hasData
+                ? ""
+                : params.data.hasValidDataToDate
+                  ? "<br/>本週未提供資料，排名沿用累計步數"
+                  : "<br/>截至目前尚無有效資料";
             return `${escapeHtml(params.name)}<br/>累計：${formatNumber(params.value)} 步${status}`;
           },
         },
@@ -1092,8 +1275,7 @@ function renderWalkingChart(data, ranked, frame) {
       els.walkingParticipants,
       currentData.participants.map((participant) => ({
         ...participant,
-        hasValidDataToDate:
-          participant.tickFrames[state.currentFrame].hasValidDataToDate,
+        hasValidDataToDate: participant.tickFrames[state.currentFrame].hasValidDataToDate,
       })),
       "walking",
     );
@@ -1102,6 +1284,80 @@ function renderWalkingChart(data, ranked, frame) {
       currentRanked,
       state.currentFrame,
     );
+  });
+}
+
+function getWalkingVisibleWeekCount(data, frame) {
+  if (!data.latestCompetitionPeriod) return 0;
+  const latestWeekCount = data.latestCompetitionPeriod.weeks.length;
+  const historicalWeekCount = data.publishedPeriods.length - latestWeekCount;
+  const ticksPerWeek = 7 * STATUS_CONFIG.walkingAnimation.framesPerDay;
+  const completedLatestWeeks = Math.min(Math.floor(frame / ticksPerWeek), latestWeekCount);
+  return historicalWeekCount + completedLatestWeeks;
+}
+
+function renderWalkingWeeklyChart(data, visibleWeekCount) {
+  const chart = getChart("walkingWeekly", els.walkingWeeklyChart);
+  const periods = data.publishedPeriods.slice(0, visibleWeekCount);
+  els.walkingWeeklyChart.dataset.visibleWeekCount = String(visibleWeekCount);
+  els.walkingWeeklyChart.dataset.weekLabels = periods.map((period) => period.periodId).join(",");
+
+  chart.setOption(
+    {
+      animationDurationUpdate: 450,
+      grid: { top: 24, right: 26, bottom: 64, left: 58 },
+      tooltip: {
+        trigger: "axis",
+        formatter: (params) => {
+          const period = periods[params[0]?.dataIndex];
+          if (!period) return "";
+          return [
+            `第 ${escapeHtml(period.periodId)} 週`,
+            `${period.startDate}～${period.endDate}`,
+            ...params.map(
+              (item) =>
+                `${item.marker}${escapeHtml(item.seriesName)}：${formatNumber(item.value)} 步`,
+            ),
+          ].join("<br/>");
+        },
+      },
+      legend: {
+        type: "scroll",
+        bottom: 0,
+        data: data.participants.map((participant) => participant.nickname),
+      },
+      xAxis: {
+        type: "category",
+        data: periods.map((period) => `第 ${period.periodId} 週`),
+        boundaryGap: false,
+      },
+      yAxis: {
+        type: "value",
+        axisLabel: { formatter: (value) => formatCompactNumber(value) },
+        splitLine: { lineStyle: { color: "#e6f0f4" } },
+      },
+      series: data.participants.map((participant) => ({
+        id: participant.id,
+        name: participant.nickname,
+        type: "line",
+        connectNulls: false,
+        showSymbol: true,
+        symbol: "circle",
+        symbolSize: 8,
+        emphasis: { focus: "series" },
+        itemStyle: { color: participant.color },
+        lineStyle: { color: participant.color, width: 2 },
+        data: participant.periods.slice(0, visibleWeekCount).map((period) => period.steps),
+      })),
+    },
+    true,
+  );
+
+  replaceChartClick(chart, (params) => {
+    const participant = data.participants.find((item) => item.id === params.seriesId);
+    if (!participant) return;
+    state.selectedParticipantId = participant.id;
+    renderWalking(data, state.currentFrame);
   });
 }
 
@@ -1116,17 +1372,19 @@ function renderWalkingDetail(data, ranked, frame) {
   const rank = rankIndex >= 0 ? rankIndex + 1 : null;
   const previous = rankIndex > 0 ? rankedWithData[rankIndex - 1] : null;
   const next = rankIndex >= 0 ? rankedWithData[rankIndex + 1] : null;
-  const status = !current.hasValidDataToDate
-    ? "截至目前尚無任何有效資料"
-    : current.hasData
-      ? "有效資料"
-      : "本週未提供資料，排名沿用累計步數";
+  const status = current.isCompetitionBaseline
+    ? "期初累計"
+    : !current.hasValidDataToDate
+      ? "截至目前尚無任何有效資料"
+      : current.hasData
+        ? "有效資料"
+        : "本週未提供資料，排名沿用累計步數";
 
   return `
     ${renderDetailHeading(participant, rank ? `目前第 ${rank} 名｜${current.date}` : `未排名｜${current.date}`, status)}
     <div class="metric-grid">
       ${renderMetric("累計步數", `${formatNumber(current.cumulativeSteps)} 步`)}
-      ${renderMetric("本週期總步數", current.hasData ? `${formatNumber(current.periodSteps)} 步` : "--")}
+      ${renderMetric("本週總步數", !current.isCompetitionBaseline && current.hasData ? `${formatNumber(current.periodSteps)} 步` : "--")}
       ${renderMetric("與前一名差距", previous ? `${formatNumber(previous.current.cumulativeSteps - current.cumulativeSteps)} 步` : "--")}
       ${renderMetric("與下一名差距", next ? `${formatNumber(current.cumulativeSteps - next.current.cumulativeSteps)} 步` : "--")}
     </div>
@@ -1158,7 +1416,11 @@ function renderHealth(data, frame) {
   renderHealthWeightedChart(data, frame);
   renderDetailDeltaChart(data, frame);
 
-  if (measurement.isBaselineMeasurement) {
+  if (data.pendingMeasurement) {
+    showNotice(
+      `${data.pendingMeasurement.measurementDate} 量測資料彙整中，完成後將統一更新；目前顯示上一個已公開期次。`,
+    );
+  } else if (measurement.isBaselineMeasurement) {
     showNotice("本次為基準量測，不計入積分；第二次量測起開始計分。");
   } else if (!ranked.some((participant) => participant.current.hasData)) {
     showNotice("本次量測無人提供有效資料，當期均為 0 分，已有成績者仍依累計積分排名。");
@@ -1173,8 +1435,7 @@ function getHealthRanked(data, frame) {
     }))
     .sort(
       (a, b) =>
-        Number(b.current.hasValidDataToDate) -
-          Number(a.current.hasValidDataToDate) ||
+        Number(b.current.hasValidDataToDate) - Number(a.current.hasValidDataToDate) ||
         b.current.totalPoints - a.current.totalPoints ||
         (b.current.latestScoringWeightedPercent ?? -Infinity) -
           (a.current.latestScoringWeightedPercent ?? -Infinity) ||
@@ -1184,9 +1445,7 @@ function getHealthRanked(data, frame) {
 
 function renderHealthScoreChart(ranked, frame) {
   const chart = getChart("healthScore", els.healthScoreChart);
-  els.healthScoreChart.dataset.rankOrder = ranked
-    .map((participant) => participant.id)
-    .join(",");
+  els.healthScoreChart.dataset.rankOrder = ranked.map((participant) => participant.id).join(",");
   const labels = ranked.map((participant) => participant.nickname);
 
   chart.setOption(
@@ -1241,9 +1500,7 @@ function renderHealthScoreChart(ranked, frame) {
             value: participant.current.rankingPointsTotal,
             id: participant.id,
             itemStyle: {
-              color: participant.current.hasValidDataToDate
-                ? participant.color
-                : "#cbd5dc",
+              color: participant.current.hasValidDataToDate ? participant.color : "#cbd5dc",
               opacity: participant.current.hasValidDataToDate ? 1 : 0.65,
             },
             label: participant.current.hasValidDataToDate
@@ -1281,9 +1538,7 @@ function renderHealthScoreChart(ranked, frame) {
             value: participant.current.extraPointsTotal,
             id: participant.id,
             itemStyle: {
-              color: participant.current.hasValidDataToDate
-                ? participant.color
-                : "#cbd5dc",
+              color: participant.current.hasValidDataToDate ? participant.color : "#cbd5dc",
               opacity: participant.current.hasValidDataToDate ? 1 : 0.65,
               decal: participant.current.hasValidDataToDate
                 ? {
@@ -1372,9 +1627,9 @@ function renderHealthDetail(data, ranked, frame) {
     ? "截至目前尚無任何有效資料"
     : current.isBaselineMeasurement
       ? "基準量測，不計分"
-    : current.hasData
-      ? "有效資料"
-      : "本次未量測，當期 0 分";
+      : current.hasData
+        ? "有效資料"
+        : "本次未量測，當期 0 分";
 
   return `
     ${renderDetailHeading(participant, rank ? `本期第 ${rank} 名｜${current.measurementDate}` : `未排名｜${current.measurementDate}`, status)}
@@ -1462,8 +1717,12 @@ function updateSummary(contest, frame) {
   els.description.textContent = contest.description;
 
   if (contest.type === "walking") {
-    els.currentPeriod.textContent = `第 ${frame.periodId} 週`;
-    els.currentRange.textContent = `${frame.date}｜本週第 ${frame.dayIndex} / ${frame.dayCount} 天`;
+    els.currentPeriod.textContent = frame.isCompetitionBaseline
+      ? `第 ${frame.competitionPeriodId} 期期初`
+      : `第 ${frame.competitionPeriodId} 期｜第 ${frame.periodId} 週`;
+    els.currentRange.textContent = frame.isCompetitionBaseline
+      ? `${frame.competitionStartDate}～${frame.competitionEndDate}`
+      : `${frame.date}｜本週第 ${frame.dayIndex} / ${frame.dayCount} 天`;
     return;
   }
 
@@ -1527,12 +1786,11 @@ function getCachedActiveData() {
 }
 
 function renderDetailHeading(participant, subtitle, status) {
-  const isDataStatus = status === "有效資料" || status === "基準量測，不計分";
+  const isDataStatus =
+    status === "有效資料" || status === "基準量測，不計分" || status === "期初累計";
   const missingClass = isDataStatus ? "" : " missing";
   const statusText =
-    status === "有效資料"
-      ? ""
-      : `<small class="detail-status">${escapeHtml(status)}</small>`;
+    status === "有效資料" ? "" : `<small class="detail-status">${escapeHtml(status)}</small>`;
   return `
     <div class="detail-heading${missingClass}" style="--participant-color: ${participant.color}">
       <span></span>
