@@ -11,3 +11,7 @@ The repository uses the five default triage labels. See `docs/agents/triage-labe
 ### Domain docs
 
 This repository uses a single-context domain-doc layout. See `docs/agents/domain.md`.
+
+### Commits
+
+Commit 訊息遵循 Conventional Commits，描述使用繁體中文。
