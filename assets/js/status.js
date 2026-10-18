@@ -4,8 +4,6 @@ const STATUS_CONFIG = {
       label: "健走賽",
       type: "walking",
       fileName: "walking.csv",
-      csvUrl:
-        "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ8IDOe31TcOdmiZzNFZTpP5yWvHzVZgKw8zLaVIw2eVYsS2eU885ezWiEq9rJwGVFgnf2QLJL-3wZt/pub?gid=1203775995&single=true&output=csv",
       intervalMs: 30,
       description: "男女混合排名賽，依每週累計步數排序。",
     },
@@ -13,8 +11,6 @@ const STATUS_CONFIG = {
       label: "男子健康賽",
       type: "health",
       fileName: "health-men.csv",
-      csvUrl:
-        "https://docs.google.com/spreadsheets/d/e/2PACX-1vRH7pAHt8WWfzzGX_QaFv9NcVeSpSGZxFgIbZJR2WWouI4NwiZEbMK7WP5IWFQl_CLw0fKd4LIhVyIs/pub?gid=988507407&single=true&output=csv",
       intervalMs: 1000,
       description: "男子組獨立排名，依身體數據加權結果計算排名積分並加總額外積分。",
     },
@@ -22,8 +18,6 @@ const STATUS_CONFIG = {
       label: "女子健康賽",
       type: "health",
       fileName: "health-women.csv",
-      csvUrl:
-        "https://docs.google.com/spreadsheets/d/e/2PACX-1vQLV4wtCZ7uGdAoGhXlOfIiZ_hVt_N-DntdrFiEOzWTODs8dyHyf7mZPE-cxlPIqJ2714OXIiePLUnG/pub?gid=1437785710&single=true&output=csv",
       intervalMs: 1000,
       description: "女子組獨立排名，依身體數據加權結果計算排名積分並加總額外積分。",
     },
@@ -161,7 +155,7 @@ function initStatusPage() {
 
 function getSourceSettings() {
   const params = new URLSearchParams(window.location.search);
-  const source = params.get("source") === "local" ? "local" : "google";
+  const source = params.get("source") === "local" ? "local" : "archive";
   const scenario = params.get("scenario") || "complete";
   const asOfRaw = params.get("asOf") || "";
 
@@ -276,10 +270,7 @@ async function loadContestData(contestKey, contest, signal) {
   }
 
   const csvUrl = resolveCsvUrl(contest);
-  const response = await fetch(csvUrl, {
-    cache: sourceSettings.source === "google" ? "no-store" : "default",
-    signal,
-  });
+  const response = await fetch(csvUrl, { signal });
   if (!response.ok) {
     throw new Error(`無法讀取 ${csvUrl}（HTTP ${response.status}）`);
   }
@@ -297,7 +288,7 @@ async function loadContestData(contestKey, contest, signal) {
 }
 
 function resolveCsvUrl(contest) {
-  if (sourceSettings.source !== "local") return contest.csvUrl;
+  if (sourceSettings.source !== "local") return `./data/${contest.fileName}`;
   if (!sourceSettings.scenarioIsValid) {
     throw new Error(
       `未知的本機測試情境「${sourceSettings.scenario}」。可用情境：${STATUS_CONFIG.localScenarios.join("、")}`,

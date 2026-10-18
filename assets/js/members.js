@@ -109,8 +109,7 @@ async function fetchAndProcessData(url) {
   }
 }
 
-const csvUrl =
-  "https://docs.google.com/spreadsheets/d/e/2PACX-1vRpfm1uIwLNQzrP2gtPUsIRH-2ULN0P1uJY3RxZd3v0CepsFxMzJSeDctM4qOC6kuDdlQL3w5fnJLwI/pub?gid=1307008200&single=true&output=csv";
+const csvUrl = "./data/members.csv";
 
 fetchAndProcessData(csvUrl)
   .then((data) => {
