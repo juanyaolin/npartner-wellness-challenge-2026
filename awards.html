@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/x-icon" href="favicon.ico" />
+    <title>頒獎典禮｜N-Partner 三比八大賽 2026</title>
+    <link rel="stylesheet" href="assets/css/styles.css" />
+    <link rel="stylesheet" href="assets/css/awards.css" />
+    <script src="assets/vendor/canvas-confetti.min.js" defer></script>
+    <!-- 真實姓名只放在本機，不進 Git；格式見 assets/js/awards-names.example.js -->
+    <script src="assets/js/awards-names.local.js" defer></script>
+    <script src="assets/js/awards.js" defer></script>
+  </head>
+  <body class="awards-page">
+    <div class="awards-glow" aria-hidden="true">
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
+    <div class="awards-spotlight" aria-hidden="true"></div>
+    <main class="awards-stage" data-stage aria-live="polite"></main>
+    <div class="awards-countdown" data-countdown aria-hidden="true"></div>
+    <div class="awards-mute" data-mute hidden>靜音中（按 M 恢復）</div>
+  </body>
+</html>
