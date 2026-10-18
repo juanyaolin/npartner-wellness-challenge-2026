@@ -1,5 +1,7 @@
 # 賽況資料封存到 Git
 
+> 後續：參賽名單也一併封存，見 `docs/plans/2026-10-18-archive-members-data.md`。
+
 狀態：完成
 
 ## 背景
